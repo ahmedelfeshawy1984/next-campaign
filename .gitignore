@@ -1,0 +1,36 @@
+# أسرار — عمرها ما تتشيّر
+web/.env.local
+web/.env*.local
+
+# Node
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js — unanchored, because a stray build from the repo root leaves a
+# .next/ here too (a mis-typed npx from the wrong directory will do it)
+.next/
+out/
+build/
+next-env.d.ts
+
+# الهارنس بيعمل قاعدة بيانات مؤقتة جنبه
+tools/schema-check/pgdata/
+tools/schema-check/node_modules/
+
+# مخرجات مؤقتة
+*.log
+out.txt
+err.txt
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# متولّد من tools/preview/dump.mjs — مش مصدر
+web/preview-data.json
+tools/preview/pgdata/

@@ -1,0 +1,25 @@
+{
+  "name": "next-campaign",
+  "private": true,
+  "version": "0.1.0",
+  "description": "نكست كامباين — مطبوعات وهدايا دعائية. موقع Next.js فوق Supabase.",
+  "workspaces": [
+    "web",
+    "tools/schema-check"
+  ],
+  "comment": "One install at the root. Workspaces exist so tools/preview and tools/web-check can import the harness dependencies without a second 100 MB Postgres download.",
+  "scripts": {
+    "db:build": "node tools/build-setup.mjs",
+    "db:check": "node tools/schema-check/verify.mjs",
+    "preview:dump": "node tools/preview/dump.mjs",
+    "preview:start": "npm run preview:dump && npm run preview:on && npm run dev",
+    "preview:on": "node tools/preview/toggle.mjs on",
+    "preview:off": "node tools/preview/toggle.mjs off",
+    "preview": "node tools/preview/toggle.mjs",
+    "check:routes": "node tools/web-check/routes.mjs",
+    "check:rtl": "node tools/web-check/rtl-lint.mjs",
+    "dev": "npm --workspace web run dev",
+    "build": "npm --workspace web run build",
+    "typecheck": "npm --workspace web run typecheck"
+  }
+}

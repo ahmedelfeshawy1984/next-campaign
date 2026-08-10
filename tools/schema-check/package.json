@@ -1,0 +1,15 @@
+{
+  "name": "next-campaign-schema-check",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Runs the real migrations against a throwaway Postgres and asserts the spec catalogue, the price ladder, the anonymous read surface and the RLS boundaries.",
+  "scripts": {
+    "check": "node verify.mjs"
+  },
+  "comment": "embedded-postgres downloads a throwaway Postgres 18 binary; the version is exact because only pre-release tags exist for the 18.x line.",
+  "dependencies": {
+    "@embedded-postgres/windows-x64": "^18.4.0-beta.17",
+    "embedded-postgres": "18.4.0-beta.17",
+    "pg": "^8.22.0"
+  }
+}
