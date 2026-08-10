@@ -19,13 +19,18 @@ export function supabase(): SupabaseClient {
     cached = createClient(env.supabaseUrl, env.supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
-        // FAIL FAST. Without a timeout, a database that is unreachable — a
-        // wrong URL, a paused project, a network blip during `next build` —
-        // makes every page hang until the framework gives up on it, one at a
-        // time. Eight seconds is far longer than a healthy query and far
-        // shorter than a build that looks frozen.
+        // FAIL FAST, but not impatiently. Without any timeout, a database that
+        // is unreachable — a wrong URL, a paused project, a network blip during
+        // `next build` — makes every page hang until the framework gives up on
+        // it, one at a time, and a build that took 60s per page looks frozen.
+        //
+        // 15s, not 8s: a build renders two dozen product pages at once against
+        // a free-tier database on the other side of the Mediterranean, and 8s
+        // was tight enough that a single slow query timed out during a real
+        // deploy. This is still far below the threshold where a stuck build is
+        // indistinguishable from a broken one.
         fetch: (input, init) =>
-          fetch(input as RequestInfo, { ...init, signal: AbortSignal.timeout(8000) }),
+          fetch(input as RequestInfo, { ...init, signal: AbortSignal.timeout(15000) }),
       },
     });
   }

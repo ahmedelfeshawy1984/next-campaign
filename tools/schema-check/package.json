@@ -8,8 +8,11 @@
   },
   "comment": "embedded-postgres downloads a throwaway Postgres 18 binary; the version is exact because only pre-release tags exist for the 18.x line.",
   "dependencies": {
-    "@embedded-postgres/windows-x64": "^18.4.0-beta.17",
     "embedded-postgres": "18.4.0-beta.17",
     "pg": "^8.22.0"
-  }
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/windows-x64": "^18.4.0-beta.17"
+  },
+  "optionalComment": "OPTIONAL, and that is load-bearing. This package is win32-only, and the root install pulls in every workspace — so on a Linux build host npm hits EBADPLATFORM and the WHOLE install fails, taking the website down with a test dependency it never needed. As an optional dependency the platform mismatch is a warning that is skipped. The harness only ever runs on the developer's Windows machine, where the platform matches and it installs normally."
 }
