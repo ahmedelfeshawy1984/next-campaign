@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { S } from '@/lib/strings';
 import { env, isConfigured } from '@/lib/env';
+import { getSiteSettings } from '@/lib/queries';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import SetupRequired from '@/components/SetupRequired';
@@ -14,18 +15,31 @@ import SetupRequired from '@/components/SetupRequired';
 // downloads at build time, and a build that reaches out to a CDN is a build
 // that fails when the CDN blinks. It did, and it took the deploy with it.
 
-export const metadata: Metadata = {
-  metadataBase: new URL(env.siteUrl),
-  title: { default: `${S.brand} — ${S.tagline}`, template: `%s — ${S.brand}` },
-  description:
-    'مطبوعات وهدايا دعائية للشركات في مصر: مجات وأقلام وأجندات وتيشرتات وفلاشات، مطبوعة بلوجو شركتك. وهدايا شخصية باسم صاحبها.',
-  openGraph: {
-    type: 'website',
-    locale: 'ar_EG',
-    siteName: S.brand,
-  },
-  robots: { index: true, follow: true },
-};
+/**
+ * The name in the browser tab, in Google's results and in a WhatsApp preview.
+ *
+ * Read from site_settings rather than hardcoded, for the same reason the header
+ * is: changing the shop's own name must not require a developer. The constants
+ * in lib/strings.ts are the fallback for a database nobody has filled in yet.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings().catch(() => null);
+  const brand = settings?.brand_name_ar || S.brand;
+  const tagline = settings?.tagline_ar || S.tagline;
+
+  return {
+    metadataBase: new URL(env.siteUrl),
+    title: { default: `${brand} — ${tagline}`, template: `%s — ${brand}` },
+    description:
+      'مطبوعات وهدايا دعائية للشركات في مصر: مجات وأقلام وأجندات وتيشرتات وفلاشات، مطبوعة بلوجو شركتك. وهدايا شخصية باسم صاحبها.',
+    openGraph: {
+      type: 'website',
+      locale: 'ar_EG',
+      siteName: brand,
+    },
+    robots: { index: true, follow: true },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

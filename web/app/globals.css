@@ -1235,3 +1235,21 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
   body { background: #fff; color: #000; font-size: 12pt; }
   @page { size: A4; margin: 14mm; }
 }
+
+/* ------------------------------------------------------- اللوجو والواجهة -- */
+
+.logo__img {
+  block-size: 38px;
+  inline-size: auto;
+  max-inline-size: 190px;
+  object-fit: contain;
+}
+
+.hero__image {
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  object-fit: cover;
+  aspect-ratio: 4 / 3;
+}
