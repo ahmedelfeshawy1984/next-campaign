@@ -22,5 +22,20 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // EXCLUDED BECAUSE IT IMPORTS A FILE THAT IS NOT IN GIT.
+    //
+    // lib/queries.preview.ts reads web/preview-data.json, which
+    // tools/preview/dump.mjs generates on a developer's machine and .gitignore
+    // deliberately keeps out of the repository — it is output, not source.
+    //
+    // The consequence was invisible locally and fatal in production: the file
+    // exists here, so `next build` passed on this machine and failed on Vercel
+    // with "Cannot find module '../preview-data.json'", taking the whole deploy
+    // with it. Nothing in the shipped site imports this module; only
+    // `npm run preview:on` uses it, by copying it over queries.ts — and at that
+    // point it is queries.ts, which is included, and the dump is there.
+    "lib/queries.preview.ts"
+  ]
 }

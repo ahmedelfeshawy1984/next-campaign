@@ -20,6 +20,7 @@
     "check:rtl": "node tools/web-check/rtl-lint.mjs",
     "dev": "npm --workspace web run dev",
     "build": "npm --workspace web run build",
-    "typecheck": "npm --workspace web run typecheck"
+    "typecheck": "npm --workspace web run typecheck",
+    "check:imports": "node tools/web-check/tracked-imports.mjs"
   }
 }
