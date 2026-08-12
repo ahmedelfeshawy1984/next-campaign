@@ -22,5 +22,10 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  // `public` is served verbatim and never compiled. It also holds
+  // clinic-sw.js, which runs in a ServiceWorkerGlobalScope — checking it
+  // against the DOM lib reports `self.skipWaiting` and `event.respondWith` as
+  // errors, and the only way to silence those in place would be to lie about
+  // the file's types.
+  "exclude": ["node_modules", "public"]
 }

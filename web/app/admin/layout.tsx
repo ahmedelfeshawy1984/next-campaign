@@ -9,5 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <AdminShell>{children}</AdminShell>;
+  // The <main> landmark used to come from the root layout. It moved out with
+  // the shop's chrome into app/(shop)/layout.tsx, so each area that is not the
+  // shop provides its own — a page with no main landmark is a page a screen
+  // reader cannot skip into.
+  return (
+    <main id="main">
+      <AdminShell>{children}</AdminShell>
+    </main>
+  );
 }

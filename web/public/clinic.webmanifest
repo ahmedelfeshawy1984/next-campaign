@@ -1,0 +1,31 @@
+{
+  "name": "العيادة",
+  "short_name": "العيادة",
+  "description": "روشتات وملفات مرضى — بتشتغل من غير نت",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/clinic",
+  "scope": "/clinic/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/clinic-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/clinic-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "الطابور", "url": "/clinic/queue" },
+    { "name": "المرضى", "url": "/clinic/patients" }
+  ]
+}

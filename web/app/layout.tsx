@@ -3,8 +3,6 @@ import { Cairo } from 'next/font/google';
 import './globals.css';
 import { S } from '@/lib/strings';
 import { env, isConfigured } from '@/lib/env';
-import SiteHeader from '@/components/SiteHeader';
-import SiteFooter from '@/components/SiteFooter';
 import SetupRequired from '@/components/SetupRequired';
 
 // Cairo carries Arabic and Latin in one family, so a price in Western digits
@@ -44,11 +42,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ar" dir="rtl" className={cairo.variable}>
       <body>
         {isConfigured ? (
-          <>
-            <SiteHeader />
-            <main id="main">{children}</main>
-            <SiteFooter />
-          </>
+          // Only what is genuinely global lives here. The shop's header and
+          // footer moved to app/(shop)/layout.tsx — see the note in that file
+          // for why hiding them was not the same as not running them.
+          children
         ) : (
           // An empty catalogue looks like a bug in the data. A setup screen
           // looks like what it is. Same call as the sibling projects.

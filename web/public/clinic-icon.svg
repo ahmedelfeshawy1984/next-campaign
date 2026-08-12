@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="العيادة">
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <!-- The ℞ every pharmacy in the country looks for, drawn rather than typed so
+       the icon does not depend on a font being installed. -->
+  <g fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round">
+    <path d="M170 356V172h64a52 52 0 0 1 0 104h-64"/>
+    <path d="M236 276l106 104"/>
+    <path d="M300 300l-58 58" stroke-width="26"/>
+  </g>
+</svg>
