@@ -86,6 +86,17 @@
   margin-block-end: 8pt;
 }
 .rx__head h1 { margin: 0; font-size: 15pt; }
+
+/* Capped in millimetres, not pixels: this is paper. A tall logo would push the
+   prescription down the sheet and off the bottom of it. */
+.rx__logo {
+  display: block;
+  max-block-size: 18mm;
+  max-inline-size: 60mm;
+  margin-inline: auto;
+  margin-block-end: 3pt;
+  object-fit: contain;
+}
 .rx__head p  { margin: 2pt 0 0; font-size: 9pt; }
 
 .rx__meta {

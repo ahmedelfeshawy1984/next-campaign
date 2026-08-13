@@ -9,6 +9,7 @@ import {
   exportCounts, downloadFullBackup, downloadPatientsCsv, downloadPrescriptionsCsv,
   type ExportCounts,
 } from '@/lib/clinic/backup';
+import { prepareLogo, LOGO_ERRORS } from '@/lib/clinic/logo';
 import { toArabicError } from '@/lib/clinic/errors';
 import { clinicIsSeparate } from '@/lib/env';
 import type { ClinicSettings } from '@/lib/clinic/types';
@@ -25,6 +26,7 @@ export default function SettingsPage() {
   const [s, setS] = useState<ClinicSettings | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [logoNote, setLogoNote] = useState<string | null>(null);
   const [cat, setCat] = useState<{ drugs: number; syncedAt: string | null }>({
     drugs: 0, syncedAt: null,
   });
@@ -78,6 +80,56 @@ export default function SettingsPage() {
                 onChange={(e) => set('address_ar', e.target.value)} />
             </label>
           </div>
+
+          <h3 className="clinic__sub">لوجو العيادة</h3>
+          <p className="cfg__hint">
+            بيتطبع فوق الروشتة لما «اطبع الترويسة» يكون مفتوح. الصورة بتتصغّر
+            وبتتحفظ جوّه الإعدادات — يعني بتطبع حتى والنت مقطوع.
+          </p>
+
+          <div className="row clinic__logo-row">
+            {s.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={s.logo_url} alt="لوجو العيادة" className="clinic__logo-preview" />
+            ) : (
+              <span className="cfg__hint">مفيش لوجو لسه.</span>
+            )}
+
+            <label>
+              <span className="cfg__hint">اختار صورة</span>
+              <input
+                className="input"
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setError(null);
+                  try {
+                    const logo = await prepareLogo(file);
+                    set('logo_url', logo.dataUrl);
+                    setLogoNote(
+                      `${logo.width}×${logo.height} · ${Math.round(logo.bytes / 1024)} كيلوبايت — اضغط «احفظ» عشان يتسجّل.`
+                    );
+                  } catch (err) {
+                    const key = err instanceof Error ? err.message : '';
+                    setError(LOGO_ERRORS[key] ?? toArabicError(err));
+                  }
+                }}
+              />
+            </label>
+
+            {s.logo_url ? (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => { set('logo_url', null); setLogoNote(null); }}
+              >
+                شيل اللوجو
+              </button>
+            ) : null}
+          </div>
+          {logoNote ? <p className="clinic__ok">{logoNote}</p> : null}
         </section>
 
         <section className="clinic__panel">

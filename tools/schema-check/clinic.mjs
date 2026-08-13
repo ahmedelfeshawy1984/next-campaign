@@ -23,6 +23,7 @@
 import { foldArabic } from '../../web/lib/arabic.js';
 import { normalizePhone } from '../../web/lib/phone.js';
 import { rankDrugs } from '../../web/lib/clinic/drugSearch.js';
+import { parseDrugList } from '../../web/lib/clinic/drugImport.js';
 
 const DOCTOR_A   = '44444444-4444-4444-4444-444444444444';
 const DOCTOR_B   = '55555555-5555-5555-5555-555555555555';
@@ -569,6 +570,111 @@ export async function clinicChecks(ctx) {
     const r = await client.query('select clinic.export_counts() c');
     check('reception gets nothing from export_counts()', r.rows[0].c === null);
   });
+
+  // ---- استيراد قايمة أدوية --------------------------------------------------
+  //
+  // The parser takes input from OUTSIDE the system by definition — a paste out
+  // of somebody's Excel sheet — which is why it is a .js file the harness can
+  // run rather than something only ever exercised by hand.
+
+  // A paste out of Excel is tab-separated, and its cells routinely contain
+  // commas. Splitting on commas first would shred exactly this.
+  const excel = parseDrugList(
+    'Concor\tكونكور\tبيسوبرولول\tأقراص\t5 مجم\n' +
+    'Augmentin\tأوجمنتين\tأموكسيسيللين\tأقراص\t1 جم');
+  check(
+    'a tab-separated paste out of Excel reads as five columns',
+    excel.rows.length === 2 &&
+      excel.rows[0].trade_name === 'Concor' &&
+      excel.rows[0].trade_name_ar === 'كونكور' &&
+      excel.rows[0].strength === '5 مجم',
+    JSON.stringify(excel.rows[0])
+  );
+
+  // The commonest paste of all: a list of names out of a chat message.
+  const plain = parseDrugList('Panadol\nBrufen\nFlagyl');
+  check(
+    'one name per line is understood as a list of trade names',
+    plain.rows.length === 3 && plain.rows[2].trade_name === 'Flagyl'
+  );
+
+  const headed = parseDrugList(
+    'trade_name,generic_ar,strength\nCataflam,ديكلوفيناك,50 مجم');
+  check(
+    'a header row is recognised and not imported as a drug',
+    headed.hadHeader && headed.rows.length === 1 &&
+      headed.rows[0].generic_ar === 'ديكلوفيناك',
+    JSON.stringify(headed.rows)
+  );
+
+  // "1,5 جم" is how a comma decimal is written in much of the world, and a
+  // spreadsheet exports it quoted. Splitting naively turns one drug into two
+  // columns and shifts every field after it.
+  const quoted = parseDrugList('trade_name,strength\nDrugX,"1,5 جم"');
+  check(
+    'a quoted field containing a comma stays one field',
+    quoted.rows.length === 1 && quoted.rows[0].strength === '1,5 جم',
+    quoted.rows[0]?.strength
+  );
+
+  const messy = parseDrugList('Panadol\n\n   \n,,,\nBrufen');
+  check(
+    'blank and nameless lines are counted as ignored, not imported',
+    messy.rows.length === 2 && messy.ignored >= 1,
+    `${messy.rows.length} rows, ${messy.ignored} ignored`
+  );
+
+  // ---- and the server side of it --------------------------------------------
+
+  await expectBlocked(
+    client, check, DOCTOR_A,
+    `select clinic.import_drugs('[{"trade_name":"Sneaky"}]'::jsonb)`,
+    'a doctor cannot bulk-import into the catalogue');
+
+  await asUserCommitted(client, DIRECTOR, async () => {
+    const r = await client.query(
+      `select clinic.import_drugs($1::jsonb) o`,
+      [JSON.stringify([
+        { trade_name: 'Concor', trade_name_ar: 'كونكور', strength: '5 مجم', form_ar: 'أقراص' },
+        { trade_name: 'BrandNewDrug', trade_name_ar: 'دوا جديد', form_ar: 'شراب' },
+        // The same row twice. Postgres raises "ON CONFLICT DO UPDATE command
+        // cannot affect row a second time" without the DISTINCT ON — a real
+        // error with an unreadable message for someone who pasted a sheet.
+        { trade_name: 'BrandNewDrug', trade_name_ar: 'دوا جديد', form_ar: 'شراب' },
+        { trade_name: '   ' },
+      ])]
+    );
+    const out = r.rows[0].o;
+    check(
+      'importing a list adds the new, updates the existing and drops the duplicate',
+      out.added === 1 && out.updated === 1 && out.skipped === 2,
+      JSON.stringify(out)
+    );
+  });
+
+  const imported = await one(
+    `select trade_name_ar from clinic.drugs
+      where trade_name = 'BrandNewDrug'`);
+  check(
+    'the imported drug is really in the catalogue, with its Arabic name',
+    imported?.trade_name_ar === 'دوا جديد',
+    imported?.trade_name_ar
+  );
+
+  // An import must not blank a name somebody typed by hand because this
+  // particular sheet had that column empty.
+  await asUserCommitted(client, DIRECTOR, async () => {
+    await client.query(
+      `select clinic.import_drugs($1::jsonb)`,
+      [JSON.stringify([{ trade_name: 'BrandNewDrug', form_ar: 'شراب' }])]);
+  });
+  const kept = await one(
+    `select trade_name_ar from clinic.drugs where trade_name = 'BrandNewDrug'`);
+  check(
+    'a later import with an empty column does not erase what was already there',
+    kept?.trade_name_ar === 'دوا جديد',
+    kept?.trade_name_ar
+  );
 
   // ---- the audit log cannot be edited by the audited ------------------------
 

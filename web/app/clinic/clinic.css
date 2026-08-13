@@ -374,3 +374,17 @@ textarea.input { resize: vertical; }
 }
 .clinic__db.is-separate { color: var(--ok); border-color: currentcolor; }
 .clinic__db .num { color: var(--ink-faint); font-size: 0.75rem; }
+
+/* ---------------------------------------------------- لوجو العيادة --- */
+
+.clinic__sub { font-size: 0.95rem; margin-block: 16px 4px; }
+.clinic__logo-row { gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.clinic__logo-preview {
+  max-block-size: 64px;
+  max-inline-size: 180px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+}

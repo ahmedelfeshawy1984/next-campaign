@@ -85,6 +85,14 @@ export default function PrintPrescription() {
       <article className="rx rx--screen" style={style}>
         {printHeader ? (
           <header className="rx__head">
+            {/* A data: URI, so it is already in the page rather than fetched.
+                A logo loaded from a bucket would be a blank space on every
+                sheet printed while the clinic's internet was down — which is
+                exactly when this system is meant to keep working. */}
+            {settings?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={settings.logo_url} alt="" className="rx__logo" />
+            ) : null}
             <h1>{settings?.clinic_name_ar ?? 'العيادة'}</h1>
             <p>
               {doctor?.display_name}
