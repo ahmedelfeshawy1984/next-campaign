@@ -506,6 +506,70 @@ export async function clinicChecks(ctx) {
     rankDrugs(catalogue, {}, 'زقزقزق', 12).length === 0
   );
 
+  // ---- النسخة الاحتياطية ----------------------------------------------------
+  //
+  // A bulk read of every patient record in the clinic — the most sensitive
+  // single operation the system can perform, and therefore the one whose
+  // access check is worth asserting rather than assuming.
+
+  await expectBlocked(
+    client, check, DOCTOR_A, 'select clinic.export_all()',
+    'a doctor cannot export the whole clinic');
+  await expectBlocked(
+    client, check, RECEPTION, 'select clinic.export_all()',
+    'reception cannot export the whole clinic');
+
+  await asUserCommitted(client, DIRECTOR, async () => {
+    const r = await client.query('select clinic.export_all() e');
+    const dump = r.rows[0].e;
+
+    check(
+      'the director gets an export containing the patients and the prescriptions',
+      dump.patients.length >= 1 && dump.prescriptions.length >= 3,
+      `${dump.patients.length} patients, ${dump.prescriptions.length} prescriptions`
+    );
+
+    // The lines have to travel WITH their prescription. A backup read by a
+    // human under pressure must not require reassembling a prescription from
+    // a second array somewhere else in the file.
+    check(
+      'every exported prescription carries its own drug lines',
+      dump.prescriptions.every((p) => Array.isArray(p.items) && p.items.length >= 1),
+      dump.prescriptions.map((p) => `${p.rx_no}:${p.items?.length}`).join(' ')
+    );
+
+    check(
+      'the export carries a schema version, so a future restorer knows what it is reading',
+      dump.schema_version === 1 && !!dump.exported_at
+    );
+
+    // Credentials live in auth.users, which this schema never touches. Worth
+    // an assertion: a backup file gets e-mailed, copied to a flash drive and
+    // left on a desk.
+    const serialised = JSON.stringify(dump);
+    check(
+      'the export contains no password hash of any kind',
+      !/encrypted_password|\$2[aby]\$/.test(serialised),
+      `${Math.round(serialised.length / 1024)} kB`
+    );
+  });
+
+  // Asking for the export is itself recorded. An export is the one action that
+  // can walk out of the building with every patient in it.
+  const exportAudit = await one(
+    `select count(*)::int n from clinic.audit_events
+      where action = 'exported_everything'`);
+  check(
+    'exporting the clinic is written to the audit log',
+    exportAudit.n === 1,
+    `${exportAudit.n} events`
+  );
+
+  await asUser(client, RECEPTION, async () => {
+    const r = await client.query('select clinic.export_counts() c');
+    check('reception gets nothing from export_counts()', r.rows[0].c === null);
+  });
+
   // ---- the audit log cannot be edited by the audited ------------------------
 
   await expectBlocked(

@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { clinicSupabase } from '@/lib/clinic/supabase';
 import { clinicSettings } from '@/lib/clinic/visits';
 import { syncCatalog, loadCatalog } from '@/lib/clinic/drugs';
+import {
+  exportCounts, downloadFullBackup, downloadPatientsCsv, downloadPrescriptionsCsv,
+  type ExportCounts,
+} from '@/lib/clinic/backup';
 import { toArabicError } from '@/lib/clinic/errors';
 import type { ClinicSettings } from '@/lib/clinic/types';
 
@@ -148,6 +152,8 @@ export default function SettingsPage() {
         </div>
       </form>
 
+      <Backup />
+
       <section className="clinic__panel">
         <h2>كتالوج الأدوية على الجهاز ده</h2>
         <p className="cfg__hint">
@@ -175,5 +181,98 @@ export default function SettingsPage() {
         </button>
       </section>
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+//  النسخة الاحتياطية
+//
+//  The counts next to the buttons are not decoration. The failure mode this
+//  screen exists to prevent is an owner downloading a file once, filing it
+//  away, and discovering a year later that it was empty — so the numbers are
+//  shown BEFORE the download and confirmed AFTER it, in the same place.
+// ---------------------------------------------------------------------------
+function Backup() {
+  const [counts, setCounts] = useState<ExportCounts | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    exportCounts().then(setCounts).catch(() => setCounts(null));
+  }, []);
+
+  async function run(label: string, fn: () => Promise<number | ExportCounts>) {
+    setBusy(label);
+    setError(null);
+    setDone(null);
+    try {
+      const result = await fn();
+      setDone(
+        typeof result === 'number'
+          ? `نزل الملف — ${result} سطر.`
+          : `نزل الملف — ${result.patients} مريض و ${result.prescriptions} روشتة.`
+      );
+      setCounts(await exportCounts().catch(() => counts));
+    } catch (e) {
+      setError(toArabicError(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="clinic__panel">
+      <h2>نسخة احتياطية</h2>
+
+      <p className="cfg__hint">
+        {counts
+          ? `عندك ${counts.patients} مريض و ${counts.prescriptions} روشتة و ${counts.encounters} كشف.`
+          : 'بنعدّ…'}
+        {counts?.last_export
+          ? ` آخر تصدير: ${new Date(counts.last_export).toLocaleString('ar-EG')}.`
+          : ' لسه ما نزّلتش نسخة.'}
+      </p>
+
+      <div className="row clinic__actions">
+        <button
+          type="button"
+          className="btn btn--brand"
+          disabled={!!busy}
+          onClick={() => void run('full', downloadFullBackup)}
+        >
+          {busy === 'full' ? 'بيجهّز…' : 'نزّل نسخة كاملة'}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          disabled={!!busy}
+          onClick={() => void run('patients', downloadPatientsCsv)}
+        >
+          {busy === 'patients' ? 'بيجهّز…' : 'المرضى (Excel)'}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost"
+          disabled={!!busy}
+          onClick={() => void run('rx', downloadPrescriptionsCsv)}
+        >
+          {busy === 'rx' ? 'بيجهّز…' : 'الروشتات (Excel)'}
+        </button>
+      </div>
+
+      {done ? <p className="clinic__ok" role="status">{done}</p> : null}
+      {error ? <p className="clinic__error" role="alert">{error}</p> : null}
+
+      <p className="cfg__hint">
+        <strong>النسخة الكاملة</strong> ملف واحد فيه كل حاجة — ده اللي بيترجع
+        منه لو حصلت مصيبة. ملفات <strong>Excel</strong> عشان تقراها بنفسك.
+        احفظهم على هارد أو فلاشة برّه الجهاز.
+      </p>
+      <p className="cfg__hint">
+        ⚠ ده مش بديل عن النسخ الاحتياطي بتاع Supabase — الخطة المجانية مافيهاش
+        نسخ ترجع منها. التفاصيل في <code>docs/العيادة.md</code>.
+      </p>
+    </section>
   );
 }
