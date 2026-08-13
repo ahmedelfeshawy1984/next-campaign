@@ -6,7 +6,9 @@
 --  no-op rather than an error wall.
 -- ============================================================================
 
+-- >>> shared-with-clinic
 create extension if not exists "pgcrypto";
+-- <<< shared-with-clinic
 
 -- ---------------------------------------------------------------- enums ----
 
@@ -15,11 +17,13 @@ create extension if not exists "pgcrypto";
 -- sibling project ended up with another app's ('promoter','manager','director')
 -- and no error anywhere. The add-value lines are the repair: no-ops on a clean
 -- install, and a fix on a colliding one.
+-- >>> shared-with-clinic
 do $$ begin create type public.user_role as enum ('customer','manager');
 exception when duplicate_object then null; end $$;
 
 alter type public.user_role add value if not exists 'customer';
 alter type public.user_role add value if not exists 'manager';
+-- <<< shared-with-clinic
 
 -- How a spec is rendered and filtered. Drives the generated admin form.
 do $$ begin create type public.spec_kind as enum ('number','bool','enum','text');
@@ -27,12 +31,14 @@ exception when duplicate_object then null; end $$;
 
 -- ------------------------------------------------------------- helpers ----
 
+-- >>> shared-with-clinic
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
   new.updated_at := now();
   return new;
 end $$;
+-- <<< shared-with-clinic
 
 -- ------------------------------------------------------------ profiles ----
 
@@ -40,6 +46,7 @@ end $$;
 -- customer value exists from day one because anonymous upload sessions land
 -- here too, and because customer accounts later should be a screen, not a
 -- migration.
+-- >>> shared-with-clinic
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   role       public.user_role not null default 'customer',
@@ -48,6 +55,7 @@ create table if not exists public.profiles (
   is_active  boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- <<< shared-with-clinic
 
 -- ---------------------------------------------------------- categories ----
 

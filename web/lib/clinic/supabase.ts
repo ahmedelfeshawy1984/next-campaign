@@ -1,9 +1,9 @@
 'use client';
 
 import { createClient } from '@supabase/supabase-js';
-import { env, isConfigured } from '../env';
+import { clinicEnv, clinicIsConfigured } from '../env';
 
-// عميل العيادة — نفس المشروع، schema تاني.
+// عميل العيادة — مشروعه ومفاتيحه.
 //
 // A THIRD client, and each of the three exists for a reason the other two
 // cannot serve:
@@ -11,6 +11,11 @@ import { env, isConfigured } from '../env';
 //   lib/supabase.ts         no session, schema public   — the shop window
 //   lib/supabase-browser.ts anonymous session, public   — artwork upload
 //   this file               a REAL session, schema clinic
+//
+// It reads clinicEnv, not env: point NEXT_PUBLIC_CLINIC_SUPABASE_URL at a
+// project of the clinic's own and patient records leave the shop's database
+// entirely. Unset, it falls back to the shop's project and the clinic keeps
+// working exactly as it shipped — see the note in lib/env.ts.
 //
 // `db.schema` is what makes PostgREST address clinic.* instead of public.*.
 // It requires one setup step in the Supabase dashboard —
@@ -29,7 +34,7 @@ import { env, isConfigured } from '../env';
 // releases. Inferring it means an upgrade cannot break this file over a
 // type-level detail nothing here depends on.
 function create() {
-  return createClient(env.supabaseUrl, env.supabaseAnonKey, {
+  return createClient(clinicEnv.supabaseUrl, clinicEnv.supabaseAnonKey, {
     db: { schema: 'clinic' },
     auth: {
       persistSession: true,
@@ -55,7 +60,7 @@ function create() {
 let cached: ReturnType<typeof create> | null = null;
 
 export function clinicSupabase(): ReturnType<typeof create> {
-  if (!isConfigured) {
+  if (!clinicIsConfigured) {
     throw new Error('Supabase is not configured');
   }
   if (!cached) cached = create();

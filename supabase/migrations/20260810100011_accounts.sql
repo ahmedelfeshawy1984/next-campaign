@@ -15,6 +15,7 @@
 -- through a third party, and a shop with four staff does not need it: the
 -- number is the username, the address is derived, and nobody ever reads that
 -- mailbox.
+-- >>> shared-with-clinic
 create or replace function public.email_for_phone(p_phone text)
 returns text
 language sql immutable as $$
@@ -131,6 +132,7 @@ begin
 
   return v_id;
 end $$;
+-- <<< shared-with-clinic
 
 -- Nobody may call the private body directly — it takes the ROLE as an
 -- argument, so a grant here would be a way for a visitor to mint a manager.

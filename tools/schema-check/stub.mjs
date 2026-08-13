@@ -11,9 +11,21 @@ import { rmSync } from 'node:fs';
 // harness that does not model that difference is a harness that certifies the
 // bug.
 export const AUTH_STUB = `
-create role anon nologin noinherit;
-create role authenticated nologin noinherit;
-create role service_role nologin noinherit bypassrls;
+-- Guarded, because ROLES ARE CLUSTER-WIDE while everything else here is
+-- per-database. The standalone-bundle check installs into a second database on
+-- the same server and would otherwise die on "role anon already exists" —
+-- which reads like a broken bundle rather than a role that is, correctly,
+-- already there.
+do $stub$ begin
+  create role anon nologin noinherit;
+exception when duplicate_object then null; end $stub$;
+do $stub$ begin
+  create role authenticated nologin noinherit;
+exception when duplicate_object then null; end $stub$;
+do $stub$ begin
+  create role service_role nologin noinherit bypassrls;
+exception when duplicate_object then null; end $stub$;
+
 grant usage on schema public to anon, authenticated, service_role;
 
 create schema extensions;

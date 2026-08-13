@@ -39,7 +39,7 @@ import {
 import { normalizePhone, isEgMobile } from '../../web/lib/phone.js';
 import { foldArabic } from '../../web/lib/arabic.js';
 import { computeQuote } from '../../web/lib/pricing.js';
-import { clinicChecks } from './clinic.mjs';
+import { clinicChecks, standaloneClinicCheck } from './clinic.mjs';
 
 const MANAGER_ID  = '11111111-1111-1111-1111-111111111111';
 const CUSTOMER_ID = '22222222-2222-2222-2222-222222222222';
@@ -1442,6 +1442,18 @@ try {
   // one was long enough already. See tools/schema-check/clinic.mjs for what it
   // asserts and why each assertion is there.
   await clinicChecks({ client, check, one, asUser, expectBlocked, expectBlockedAnon });
+
+  // ---- العيادة لوحدها ---------------------------------------------------------
+  //
+  // SETUP-CLINIC-ONLY.sql installs the clinic on a database with no shop in it,
+  // built by extracting the shared foundation out of the shop's own migrations
+  // rather than copying it. Everything above proved the clinic works next to
+  // the shop; this proves it works WITHOUT one.
+  //
+  // Run in a SEPARATE DATABASE on the same server, and that is the whole point:
+  // asserting it against the database the shop already installed would pass no
+  // matter what the bundle contained.
+  await standaloneClinicCheck({ pg, check, AUTH_STUB });
 
   // ---- this database belongs to THIS app ------------------------------------
 
