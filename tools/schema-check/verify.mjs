@@ -39,6 +39,7 @@ import {
 import { normalizePhone, isEgMobile } from '../../web/lib/phone.js';
 import { foldArabic } from '../../web/lib/arabic.js';
 import { computeQuote } from '../../web/lib/pricing.js';
+import { clinicChecks } from './clinic.mjs';
 
 const MANAGER_ID  = '11111111-1111-1111-1111-111111111111';
 const CUSTOMER_ID = '22222222-2222-2222-2222-222222222222';
@@ -1434,6 +1435,13 @@ try {
     missing.length === 0,
     missing.length ? `missing: ${missing.join(', ')}` : 'all present'
   );
+
+  // ---- العيادة ---------------------------------------------------------------
+
+  // In its own file: a separate schema with a separate threat model, and this
+  // one was long enough already. See tools/schema-check/clinic.mjs for what it
+  // asserts and why each assertion is there.
+  await clinicChecks({ client, check, one, asUser, expectBlocked, expectBlockedAnon });
 
   // ---- this database belongs to THIS app ------------------------------------
 

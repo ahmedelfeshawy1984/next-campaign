@@ -1,0 +1,173 @@
+/* الروشتة — A5 على ورق مطبوع مسبقًا.
+ *
+ * ⚠ THIS FILE IS IMPORTED BY THE PRINT PAGE ONLY.
+ *
+ * `@page` is a DOCUMENT-level rule: there is no way to scope it to a class or
+ * a subtree. Putting `size: A5` in globals.css would silently retarget the
+ * shop's A4 job sheet (app/admin/requests/[code]/print) to A5 and nobody would
+ * notice until a workshop printed one. Next code-splits CSS per route, so
+ * importing it from this page — and nowhere else — is the scope.
+ *
+ * THE OFFSETS COME FROM THE DATABASE, not from here. The paper already carries
+ * the clinic's letterhead; how much of the sheet that occupies is a property
+ * of a print run, and the day the print shop delivers a batch with a taller
+ * header the fix has to be a settings screen rather than a deploy. The page
+ * sets --rx-header-mm and friends inline from clinic.settings.
+ */
+
+@page {
+  size: A5;
+  /* Zero, deliberately. The printer's own margins would be added to the
+     letterhead offset below and the whole prescription would creep down the
+     page by however much this particular printer felt like. */
+  margin: 0;
+}
+
+.rx {
+  /* Fallbacks matter: if settings fail to load, printing on a typical
+     pre-printed pad should still land roughly right rather than over the
+     clinic's name. */
+  --rx-header-mm: 35mm;
+  --rx-footer-mm: 20mm;
+  --rx-margin-mm: 12mm;
+
+  box-sizing: border-box;
+  width: 148mm;
+  min-height: 210mm;
+  margin-inline: auto;
+  padding-block-start: var(--rx-header-mm);
+  padding-block-end: var(--rx-footer-mm);
+  padding-inline: var(--rx-margin-mm);
+  background: #fff;
+  color: #000;
+  font-size: 11pt;
+  line-height: 1.5;
+}
+
+/* On screen only — a paper-shaped preview so the doctor can see what will come
+   out before they commit a sheet of headed paper to it. */
+.rx--screen {
+  box-shadow: 0 2px 18px rgb(0 0 0 / 18%);
+  margin-block: 16px;
+  /* The letterhead is not on the screen, so show where it will be. */
+  position: relative;
+}
+
+.rx--screen::before {
+  content: 'مكان ترويسة العيادة المطبوعة';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--rx-header-mm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-block-end: 1px dashed #bbb;
+  color: #aaa;
+  font-size: 9pt;
+}
+
+.rx__toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 148mm;
+  margin-inline: auto;
+  margin-block-start: 16px;
+}
+
+/* The letterhead the system draws ITSELF, for plain paper and for the lab
+   sheet. Hidden unless settings say print_header. */
+.rx__head {
+  text-align: center;
+  border-block-end: 1.5pt solid #000;
+  padding-block-end: 6pt;
+  margin-block-end: 8pt;
+}
+.rx__head h1 { margin: 0; font-size: 15pt; }
+.rx__head p  { margin: 2pt 0 0; font-size: 9pt; }
+
+.rx__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8pt;
+  font-size: 10pt;
+  border-block-end: 0.75pt solid #000;
+  padding-block-end: 4pt;
+  margin-block-end: 8pt;
+}
+.rx__meta strong { font-weight: 700; }
+
+/* الحساسية — printed, not just on screen. The pharmacist reads this sheet too,
+   and they are the last person who can catch it. */
+.rx__allergy {
+  border: 1.5pt solid #000;
+  padding: 4pt 6pt;
+  margin-block-end: 8pt;
+  font-weight: 700;
+  font-size: 10pt;
+}
+
+.rx__rx {
+  font-size: 26pt;
+  line-height: 1;
+  margin-block-end: 4pt;
+  font-family: serif;   /* the ℞ that every pharmacy in the country looks for */
+}
+
+.rx__lines { list-style: none; margin: 0; padding: 0; }
+
+.rx__line {
+  display: flex;
+  gap: 6pt;
+  padding-block: 5pt;
+  border-block-end: 0.5pt dotted #999;
+  /* A drug must never be split across a page break — half a dose on each side
+     of a fold is how a patient takes the wrong amount. */
+  break-inside: avoid;
+}
+.rx__line-no { font-weight: 700; min-width: 12pt; }
+.rx__line-name { font-weight: 700; font-size: 12pt; }
+.rx__line-how { font-size: 10pt; }
+.rx__line-note { font-size: 9.5pt; }
+
+.rx__plan {
+  margin-block-start: 8pt;
+  padding-block-start: 4pt;
+  border-block-start: 0.75pt solid #000;
+  font-size: 10pt;
+}
+
+.rx__foot {
+  margin-block-start: 10pt;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 9.5pt;
+}
+.rx__sign { text-align: center; }
+.rx__sign-line {
+  border-block-start: 0.75pt solid #000;
+  min-width: 40mm;
+  margin-block-start: 14pt;
+  padding-block-start: 2pt;
+}
+
+.rx__draft {
+  border: 1.5pt dashed #000;
+  padding: 4pt;
+  text-align: center;
+  font-weight: 700;
+  margin-block-end: 6pt;
+}
+
+@media print {
+  /* The viewer paints its own background behind the page; without this the
+     preview's grey shows up as a grey wash on the paper. */
+  html, body { background: #fff !important; margin: 0; padding: 0; }
+  .rx__toolbar, .clinic__bar, .clinic__note { display: none !important; }
+  .rx--screen { box-shadow: none; margin: 0; }
+  .rx--screen::before { display: none; }   /* the real letterhead is on the paper */
+  .rx { width: auto; min-height: auto; }
+}

@@ -1,0 +1,357 @@
+/* العيادة — الأنماط.
+ *
+ * Loaded only under /clinic (imported by app/clinic/layout.tsx), so nothing
+ * here can reach the shop. It reuses the tokens from globals.css — --brand,
+ * --ink, --line and the rest — rather than inventing a palette, so the clinic
+ * follows the site's light and dark themes without a second set of colours to
+ * keep in sync.
+ *
+ * LOGICAL PROPERTIES ONLY. tools/web-check/rtl-lint.mjs fails the build on a
+ * `margin-left`, and it is right to: the document is RTL, and a physical
+ * property is correct in exactly one direction while looking fine to whoever
+ * wrote it.
+ */
+
+.clinic {
+  --clinic: #0f766e;      /* teal — deliberately NOT the shop's vermilion, so a
+                             glance at a screen says which system you are in */
+  --clinic-tint: #ecfdf9;
+  --danger: #b3261e;
+  --danger-tint: #fdecea;
+}
+
+@media (prefers-color-scheme: dark) {
+  .clinic {
+    --clinic: #2dd4bf;
+    --clinic-tint: #10221f;
+    --danger: #f2857c;
+    --danger-tint: #2a1614;
+  }
+}
+
+/* ----------------------------------------------------------------- bar --- */
+
+.clinic__bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  background: var(--paper);
+  border-block-end: 1px solid var(--line);
+}
+.clinic__bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-block-size: var(--header-h);
+  flex-wrap: wrap;
+}
+.clinic__bar .logo__mark { background: var(--clinic); }
+.clinic__who { display: flex; flex-direction: column; line-height: 1.2; }
+.clinic__who small { color: var(--ink-faint); font-size: 0.75rem; }
+
+.clinic__bar-warn,
+.clinic__warn {
+  background: var(--brand-tint);
+  color: var(--warn);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-block: 8px;
+  font-size: 0.9rem;
+}
+.clinic__note {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  margin-block: 10px;
+}
+.clinic__body { padding-block: 18px 60px; }
+.clinic__head { align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+/* --------------------------------------------------- مؤشر الاتصال --- */
+
+.clinic-net {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+}
+.clinic-net__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+.clinic-net--ok   { color: var(--ok); }
+.clinic-net--wait { color: var(--warn); cursor: pointer; }
+.clinic-net--off  { color: var(--ink-soft); background: var(--surface); }
+.clinic-net--bad  { color: var(--danger); background: var(--danger-tint); }
+
+/* -------------------------------------------------------------- forms --- */
+
+.input {
+  inline-size: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.input:focus-visible { outline: 2px solid var(--clinic); outline-offset: 1px; }
+textarea.input { resize: vertical; }
+
+.clinic label { display: block; margin-block: 10px; }
+.clinic label > .cfg__hint { display: block; margin-block-end: 4px; }
+
+.clinic__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+.clinic__span2 { grid-column: 1 / -1; }
+.clinic__check { display: flex; align-items: center; gap: 8px; }
+.clinic__check input { inline-size: auto; }
+
+@media (max-width: 700px) {
+  .clinic__grid2 { grid-template-columns: 1fr; }
+}
+
+.clinic__panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-block: 16px;
+  background: var(--paper);
+}
+.clinic__panel h2 { margin-block: 0 10px; font-size: 1.05rem; }
+
+.clinic__actions { gap: 10px; flex-wrap: wrap; margin-block: 18px; }
+.clinic__filters { gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.clinic__error { color: var(--danger); font-weight: 700; margin-block: 8px; }
+.clinic__ok    { color: var(--ok); font-weight: 700; margin-block: 8px; }
+
+/* ------------------------------------------------------ الحساسية --- */
+
+/* Loud on purpose. This is the one element on the examination screen that
+   must never be missed, and it is never behind a click. */
+.clinic__allergy {
+  background: var(--danger-tint);
+  color: var(--danger);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-block: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.clinic__chronic {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-block: 8px;
+}
+.clinic__allergy-chip {
+  display: inline-block;
+  margin-block-start: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--danger-tint);
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.clinic__prior .clinic__prior-rx {
+  padding-block: 6px;
+  border-block-end: 1px dotted var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.clinic__prior .clinic__prior-rx:last-child { border-block-end: 0; }
+
+/* -------------------------------------------------------------- cards --- */
+
+.clinic__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-block: 16px;
+}
+.clinic__card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+  background: var(--paper);
+}
+.clinic__card strong { display: block; font-size: 1.9rem; line-height: 1.1; }
+.clinic__card span   { color: var(--ink-soft); font-size: 0.85rem; }
+.clinic__card--warn  { border-color: var(--warn); color: var(--warn); }
+
+/* ------------------------------------------------------------- lists --- */
+
+.clinic__queue,
+.clinic__patients {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.clinic__queue > li,
+.clinic__patients > li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-block-end: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.clinic__queue > li > div:first-child,
+.clinic__patients > li > div:first-child { flex: 1 1 240px; }
+.clinic__queue strong,
+.clinic__patients strong { display: block; }
+.clinic__patients .cfg__hint { display: block; }
+
+.clinic__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin-block: 12px;
+}
+.clinic__facts dt { color: var(--ink-faint); font-weight: 700; }
+.clinic__facts dd { margin: 0; font-weight: 600; }
+
+.clinic__facts-list { list-style: none; margin: 0; padding: 0; }
+.clinic__facts-list li {
+  display: flex;
+  justify-content: space-between;
+  padding-block: 8px;
+  border-block-end: 1px solid var(--line);
+}
+
+.clinic__timeline { list-style: none; margin: 0; padding: 0; }
+.clinic__timeline > li {
+  padding: 12px 0;
+  border-block-end: 1px solid var(--line);
+}
+.clinic__timeline > li.is-superseded { opacity: 0.6; }
+.clinic__timeline > li.is-amend { border-inline-start: 3px solid var(--warn); padding-inline-start: 10px; }
+.clinic__rx-items { margin-block: 6px 0; padding-inline-start: 20px; }
+.clinic__rx-items li { padding-block: 2px; }
+
+.clinic__tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.clinic__amend { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.clinic__amend .input { inline-size: auto; }
+
+/* -------------------------------------------------------------- table --- */
+
+.clinic__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  margin-block: 12px;
+  /* Wide content scrolls inside its own box rather than pushing the page
+     sideways on a phone. */
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.clinic__table th,
+.clinic__table td {
+  padding: 10px 12px;
+  border-block-end: 1px solid var(--line);
+  text-align: start;
+  vertical-align: top;
+}
+.clinic__table th { color: var(--ink-faint); font-size: 0.82rem; }
+.clinic__table tr.is-off { opacity: 0.5; }
+
+/* -------------------------------------------------- حقل الدوا --- */
+
+.drugpick { position: relative; }
+.drugpick__list {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 2px);
+  z-index: 30;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-block-size: 300px;
+  overflow-y: auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+}
+.drugpick__item {
+  display: block;
+  inline-size: 100%;
+  text-align: start;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.drugpick__item.is-active { background: var(--clinic-tint); }
+.drugpick__ar      { color: var(--ink-soft); font-size: 0.9rem; }
+.drugpick__form    { color: var(--ink-soft); font-size: 0.85rem; }
+.drugpick__generic { display: block; color: var(--ink-faint); font-size: 0.8rem; font-style: normal; }
+.drugpick__none    { color: var(--ink-faint); font-size: 0.82rem; margin-block: 4px; }
+
+/* ------------------------------------------------------ بناء الروشتة --- */
+
+.rxb__row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding-block: 10px;
+  border-block-end: 1px dotted var(--line);
+}
+.rxb__no {
+  inline-size: 24px;
+  padding-block-start: 10px;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+.rxb__fields { flex: 1 1 auto; min-inline-size: 0; }
+.rxb__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0 10px;
+}
+.rxb__del { margin-block-start: 6px; }
+
+@media (max-width: 700px) {
+  .rxb__grid { grid-template-columns: 1fr 1fr; }
+}
+
+.clinic__vitals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 0 10px;
+}
+.clinic__vital { margin-block: 6px; }
+
+.clinic__rxno { margin-inline-start: 10px; font-weight: 400; }
+.clinic__ready { margin-block-start: 24px; }
+
+/* -------------------------------------------------------------- login --- */
+
+.clinic__login { max-inline-size: 380px; margin-block: 60px; }
+.clinic__login .btn { inline-size: 100%; margin-block-start: 14px; }
+.clinic__login-note { margin-block-start: 20px; }

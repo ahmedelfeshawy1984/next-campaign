@@ -135,6 +135,77 @@ try {
 
   const notFound = await get('/p/this-slug-does-not-exist');
   check('an unknown product slug 404s', notFound.status === 404, `HTTP ${notFound.status}`);
+
+  // ---- العيادة ---------------------------------------------------------------
+  //
+  // The clinic is patient data behind a login, and the checks here are about
+  // it staying OUT of everything the shop publishes. The access control itself
+  // is RLS and is asserted in tools/schema-check/clinic.mjs; what a crawler
+  // can find is this file's business.
+
+  const clinicInSitemap = paths.filter((p) => p.startsWith('/clinic'));
+  check(
+    'no clinic route appears in the sitemap',
+    clinicInSitemap.length === 0,
+    clinicInSitemap.join(', ') || 'none'
+  );
+
+  const robots = (await get('/robots.txt')).body;
+  check(
+    'robots.txt disallows /clinic',
+    /Disallow:\s*\/clinic/i.test(robots),
+    robots.split('\n').filter((l) => /disallow/i.test(l)).join(' | ')
+  );
+
+  const clinicHome = await get('/clinic');
+  check(
+    'GET /clinic serves the app shell',
+    clinicHome.status === 200,
+    `HTTP ${clinicHome.status}`
+  );
+  // The gate is a session check that runs in the browser and a database that
+  // returns nothing without one. What must NOT happen is patient data arriving
+  // in the server-rendered HTML, where a crawler or a shared link would carry
+  // it without anyone signing in.
+  check(
+    'the clinic shell is served with noindex',
+    /noindex/i.test(clinicHome.body),
+    'robots meta present'
+  );
+
+  const manifest = await get('/clinic.webmanifest');
+  let parsedManifest = null;
+  try {
+    parsedManifest = JSON.parse(manifest.body);
+  } catch { /* reported below */ }
+  check(
+    'the PWA manifest is served and parses',
+    manifest.status === 200 && !!parsedManifest,
+    `HTTP ${manifest.status}`
+  );
+  // Scope is what keeps the service worker off the shop. Worth asserting,
+  // because widening it is a one-character edit with consequences nobody would
+  // connect back to it.
+  check(
+    'the manifest is scoped to /clinic/ only',
+    parsedManifest?.scope === '/clinic/',
+    parsedManifest?.scope ?? 'missing'
+  );
+
+  const sw = await get('/clinic-sw.js');
+  check(
+    'the service worker is served from the origin root so it can claim /clinic/',
+    sw.status === 200,
+    `HTTP ${sw.status}`
+  );
+
+  // The shop must not have become installable or worker-controlled by
+  // accident — the whole point of scoping both.
+  check(
+    'the shop home page links no manifest',
+    !/rel="manifest"/i.test(home),
+    'clean'
+  );
 } finally {
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} passed`);

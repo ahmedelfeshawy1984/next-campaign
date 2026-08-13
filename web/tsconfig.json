@@ -36,6 +36,12 @@
     // with it. Nothing in the shipped site imports this module; only
     // `npm run preview:on` uses it, by copying it over queries.ts — and at that
     // point it is queries.ts, which is included, and the dump is there.
-    "lib/queries.preview.ts"
+    "lib/queries.preview.ts",
+
+    // Served verbatim, never compiled. It also holds clinic-sw.js, which runs
+    // in a ServiceWorkerGlobalScope — checked against the DOM lib it reports
+    // `self.skipWaiting` and `event.respondWith` as errors, and the only way to
+    // silence those in place would be to lie about the file's types.
+    "public"
   ]
 }

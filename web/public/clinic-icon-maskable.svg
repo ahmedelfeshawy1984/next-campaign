@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="العيادة">
+  <!-- Maskable: Android crops this to a circle, a squircle or a rounded square
+       depending on the launcher, and it keeps only the middle ~80%. So the
+       background is edge to edge and the mark is scaled down to sit inside the
+       safe zone. Reusing the plain icon here would clip the ℞. -->
+  <rect width="512" height="512" fill="#0f766e"/>
+  <g fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"
+     transform="translate(256 256) scale(0.72) translate(-256 -256)">
+    <path d="M170 356V172h64a52 52 0 0 1 0 104h-64"/>
+    <path d="M236 276l106 104"/>
+    <path d="M300 300l-58 58" stroke-width="22"/>
+  </g>
+</svg>
