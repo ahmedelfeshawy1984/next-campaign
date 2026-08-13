@@ -29,6 +29,8 @@ export interface ClinicStaff {
 
 export interface ClinicSettings {
   clinic_name_ar: string;
+  /** data: URI, stored inline so the letterhead prints with no network. */
+  logo_url: string | null;
   address_ar: string | null;
   phone: string | null;
   whatsapp_phone: string | null;

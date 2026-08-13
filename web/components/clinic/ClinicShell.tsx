@@ -32,6 +32,7 @@ const NAV: NavItem[] = [
   { href: '/clinic/queue',    label: 'الطابور',   show: () => true },
   { href: '/clinic/patients', label: 'المرضى',    show: () => true },
   { href: '/clinic/day',      label: 'حساب اليوم', show: (s) => s.role !== 'doctor' },
+  { href: '/clinic/drugs',    label: 'الأدوية',   show: (s) => s.role !== 'reception' },
   { href: '/clinic/reports',  label: 'التقارير',  show: isDirector },
   { href: '/clinic/staff',    label: 'الفريق',    show: isDirector },
   { href: '/clinic/settings', label: 'الإعدادات', show: isDirector },
