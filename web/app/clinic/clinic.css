@@ -355,3 +355,22 @@ textarea.input { resize: vertical; }
 .clinic__login { max-inline-size: 380px; margin-block: 60px; }
 .clinic__login .btn { inline-size: 100%; margin-block-start: 14px; }
 .clinic__login-note { margin-block-start: 20px; }
+
+/* أنهي قاعدة بيانات — على شاشة الدخول، قبل ما حد يدخل.
+ *
+ * Deliberately plain and small. It is a fact for whoever is setting the system
+ * up, not a warning for the doctor signing in every morning. */
+.clinic__db {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-block-start: 18px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.clinic__db.is-separate { color: var(--ok); border-color: currentcolor; }
+.clinic__db .num { color: var(--ink-faint); font-size: 0.75rem; }
