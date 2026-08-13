@@ -215,4 +215,7 @@ export interface SiteSettings {
   tiktok_url: string | null;
   linkedin_url: string | null;
   og_default_image: string | null;
+  logo_url: string | null;
+  hero_url: string | null;
+  hero_alt_ar: string | null;
 }

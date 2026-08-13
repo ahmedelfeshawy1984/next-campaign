@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { S } from '@/lib/strings';
 import { getCategories, getOccasions, getFeaturedProducts, getSiteSettings } from '@/lib/queries';
 import ProductGrid from '@/components/ProductGrid';
+import { mediaUrl } from '@/lib/supabase';
 
 export const revalidate = 300;
 
@@ -13,6 +15,7 @@ export default async function HomePage() {
     getSiteSettings(),
   ]);
   const currency = settings?.currency ?? S.common.currency;
+  const hero = mediaUrl(settings?.hero_url);
   const topLevel = categories.filter((c) => !c.parent_id);
 
   return (
@@ -38,14 +41,29 @@ export default async function HomePage() {
             ) : null}
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {topLevel.slice(0, 6).map((c) => (
-              <Link key={c.id} href={`/c/${c.slug}`} className="tile">
-                <div className="tile__title">{c.name_ar}</div>
-                {c.blurb_ar ? <div className="tile__blurb">{c.blurb_ar}</div> : null}
-              </Link>
-            ))}
-          </div>
+          {hero ? (
+            // A photograph when there is one, and the category tiles when there
+            // is not — rather than a placeholder box. The tiles appear again
+            // further down anyway, so nothing is lost by giving the space to a
+            // real picture of real work.
+            <Image
+              src={hero}
+              alt={settings?.hero_alt_ar || settings?.brand_name_ar || S.brand}
+              width={900}
+              height={700}
+              priority
+              className="hero__image"
+            />
+          ) : (
+            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {topLevel.slice(0, 6).map((c) => (
+                <Link key={c.id} href={`/c/${c.slug}`} className="tile">
+                  <div className="tile__title">{c.name_ar}</div>
+                  {c.blurb_ar ? <div className="tile__blurb">{c.blurb_ar}</div> : null}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
