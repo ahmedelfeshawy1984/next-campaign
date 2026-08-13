@@ -10,6 +10,7 @@ import {
   type ExportCounts,
 } from '@/lib/clinic/backup';
 import { toArabicError } from '@/lib/clinic/errors';
+import { clinicIsSeparate } from '@/lib/env';
 import type { ClinicSettings } from '@/lib/clinic/types';
 
 // إعدادات العيادة.
@@ -151,6 +152,28 @@ export default function SettingsPage() {
           <Link className="btn btn--ghost" href="/clinic/patients">المرضى</Link>
         </div>
       </form>
+
+      {/* Where the patient records physically live. Shown rather than assumed:
+          an environment variable set correctly six months ago is not something
+          the person responsible for these records should have to take on
+          trust. */}
+      <section className="clinic__panel">
+        <h2>بيانات المرضى بتتخزّن فين</h2>
+        {clinicIsSeparate ? (
+          <p className="clinic__ok">
+            ✅ في قاعدة بيانات مستقلة خاصة بالعيادة — مفيش أي حاجة مشتركة مع
+            بيانات المحل.
+          </p>
+        ) : (
+          <p className="cfg__hint">
+            دلوقتي في نفس مشروع Supabase بتاع المحل، في مكان منفصل جوّاه
+            (<code>schema</code> اسمه clinic) والزوار ملهمش وصول ليه.
+            <br />
+            عايزها في قاعدة بيانات مستقلة تمامًا؟ الخطوات في{' '}
+            <code>docs/العيادة.md</code>.
+          </p>
+        )}
+      </section>
 
       <Backup />
 

@@ -21,7 +21,9 @@
 --  no-op rather than an error wall.
 -- ============================================================================
 
+-- >>> shared-with-clinic
 create extension if not exists "pgcrypto";
+-- <<< shared-with-clinic
 
 -- ---------------------------------------------------------------- enums ----
 
@@ -30,11 +32,13 @@ create extension if not exists "pgcrypto";
 -- sibling project ended up with another app's ('promoter','manager','director')
 -- and no error anywhere. The add-value lines are the repair: no-ops on a clean
 -- install, and a fix on a colliding one.
+-- >>> shared-with-clinic
 do $$ begin create type public.user_role as enum ('customer','manager');
 exception when duplicate_object then null; end $$;
 
 alter type public.user_role add value if not exists 'customer';
 alter type public.user_role add value if not exists 'manager';
+-- <<< shared-with-clinic
 
 -- How a spec is rendered and filtered. Drives the generated admin form.
 do $$ begin create type public.spec_kind as enum ('number','bool','enum','text');
@@ -42,12 +46,14 @@ exception when duplicate_object then null; end $$;
 
 -- ------------------------------------------------------------- helpers ----
 
+-- >>> shared-with-clinic
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
   new.updated_at := now();
   return new;
 end $$;
+-- <<< shared-with-clinic
 
 -- ------------------------------------------------------------ profiles ----
 
@@ -55,6 +61,7 @@ end $$;
 -- customer value exists from day one because anonymous upload sessions land
 -- here too, and because customer accounts later should be a screen, not a
 -- migration.
+-- >>> shared-with-clinic
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   role       public.user_role not null default 'customer',
@@ -63,6 +70,7 @@ create table if not exists public.profiles (
   is_active  boolean not null default true,
   created_at timestamptz not null default now()
 );
+-- <<< shared-with-clinic
 
 -- ---------------------------------------------------------- categories ----
 
@@ -343,6 +351,7 @@ create trigger product_private_touch before update on public.product_private
 --      `profiles` with their own table and answer `is_manager()` themselves.
 -- ============================================================================
 
+-- >>> shared-with-clinic
 create or replace function public.my_role()
 returns public.user_role
 language sql stable security definer set search_path = public as $$
@@ -432,6 +441,7 @@ end $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
+-- <<< shared-with-clinic
 
 -- ## 20260810100002_printing.sql
 -- ============================================================================
@@ -928,7 +938,9 @@ insert into public.site_settings (id) values (true) on conflict (id) do nothing;
 --  Writes stay manager-only, everywhere, without exception.
 -- ============================================================================
 
+-- >>> shared-with-clinic
 alter table public.profiles               enable row level security;
+-- <<< shared-with-clinic
 alter table public.categories             enable row level security;
 alter table public.occasions              enable row level security;
 alter table public.products               enable row level security;
@@ -997,6 +1009,7 @@ $$;
 
 -- ------------------------------------------------------------- profiles ----
 
+-- >>> shared-with-clinic
 drop policy if exists profiles_read on public.profiles;
 create policy profiles_read on public.profiles
   for select to authenticated
@@ -1011,6 +1024,7 @@ drop policy if exists profiles_self_update on public.profiles;
 create policy profiles_self_update on public.profiles
   for update to authenticated
   using (id = auth.uid()) with check (id = auth.uid());
+-- <<< shared-with-clinic
 
 -- ------------------------------------------------------------- products ----
 
@@ -2502,6 +2516,7 @@ grant execute on function public.cleanup_orphan_uploads(int) to authenticated;
 -- through a third party, and a shop with four staff does not need it: the
 -- number is the username, the address is derived, and nobody ever reads that
 -- mailbox.
+-- >>> shared-with-clinic
 create or replace function public.email_for_phone(p_phone text)
 returns text
 language sql immutable as $$
@@ -2618,6 +2633,7 @@ begin
 
   return v_id;
 end $$;
+-- <<< shared-with-clinic
 
 -- Nobody may call the private body directly — it takes the ROLE as an
 -- argument, so a grant here would be a way for a visitor to mint a manager.

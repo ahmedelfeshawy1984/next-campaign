@@ -17,7 +17,9 @@
 --  Writes stay manager-only, everywhere, without exception.
 -- ============================================================================
 
+-- >>> shared-with-clinic
 alter table public.profiles               enable row level security;
+-- <<< shared-with-clinic
 alter table public.categories             enable row level security;
 alter table public.occasions              enable row level security;
 alter table public.products               enable row level security;
@@ -86,6 +88,7 @@ $$;
 
 -- ------------------------------------------------------------- profiles ----
 
+-- >>> shared-with-clinic
 drop policy if exists profiles_read on public.profiles;
 create policy profiles_read on public.profiles
   for select to authenticated
@@ -100,6 +103,7 @@ drop policy if exists profiles_self_update on public.profiles;
 create policy profiles_self_update on public.profiles
   for update to authenticated
   using (id = auth.uid()) with check (id = auth.uid());
+-- <<< shared-with-clinic
 
 -- ------------------------------------------------------------- products ----
 

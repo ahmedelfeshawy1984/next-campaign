@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { clinicSignIn } from '@/lib/clinic/session';
+import { clinicIsSeparate, clinicProjectRef } from '@/lib/env';
 
 export default function ClinicLogin() {
   const router = useRouter();
@@ -69,6 +70,18 @@ export default function ClinicLogin() {
       <p className="cfg__hint clinic__login-note">
         أول مرة تدخل، كتالوج الأدوية بينزل على الجهاز — بعدها البحث بيشتغل من
         غير نت.
+      </p>
+
+      {/* ⚠ WHICH DATABASE THIS PAGE IS TALKING TO, before anyone signs in.
+          Vercel injects environment variables at BUILD time, so setting the
+          clinic's project and not redeploying — or redeploying a build made
+          before the code that reads them existed — leaves a site that looks
+          perfect and is reading the wrong database. The only symptom is
+          "الموبايل أو كلمة السر غلط", because the account is in the project
+          nobody is talking to. That is unguessable, so it is printed. */}
+      <p className={`clinic__db ${clinicIsSeparate ? 'is-separate' : ''}`}>
+        {clinicIsSeparate ? '✅ قاعدة بيانات العيادة المستقلة' : '⚠ مشروع المحل'}
+        <span className="num" dir="ltr">{clinicProjectRef || '—'}</span>
       </p>
     </div>
   );

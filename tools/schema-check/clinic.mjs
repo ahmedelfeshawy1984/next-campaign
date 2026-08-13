@@ -596,3 +596,111 @@ async function asUserCommitted(client, uid, fn) {
     await client.query('reset role');
   }
 }
+
+// ---------------------------------------------------------------------------
+//  الحزمة المستقلة
+//
+//  Applies supabase/SETUP-CLINIC-ONLY.sql to an EMPTY database and runs the
+//  whole clinic suite against it.
+//
+//  Why a second database rather than a second schema: the bundle's entire job
+//  is to stand up without the shop, and running it where the shop is already
+//  installed would find profiles(), fold_arabic() and create_account() sitting
+//  there regardless of whether the bundle carried them. The test would pass on
+//  a bundle containing nothing at all.
+// ---------------------------------------------------------------------------
+export async function standaloneClinicCheck({ pg, check, AUTH_STUB }) {
+  const { readFileSync } = await import('node:fs');
+  const { resolve, dirname } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+
+  const here = dirname(fileURLToPath(import.meta.url));
+  const bundle = resolve(here, '../../supabase/SETUP-CLINIC-ONLY.sql');
+
+  const admin = pg.getPgClient();
+  await admin.connect();
+
+  let db = null;
+  try {
+    await admin.query('create database clinic_only');
+    db = pg.getPgClient();
+    db.database = 'clinic_only';
+    // node-postgres reads the database off the connection config, and the
+    // embedded client hands back one pinned to `postgres`. Reconnect explicitly.
+    const { Client } = await import('pg');
+    db = new Client({
+      host: 'localhost', port: 54997, user: 'postgres',
+      password: 'postgres', database: 'clinic_only',
+    });
+    await db.connect();
+
+    await db.query(AUTH_STUB);
+    await db.query(readFileSync(bundle, 'utf8'));
+    check('SETUP-CLINIC-ONLY.sql installs on an empty database', true);
+
+    const t = await db.query(
+      `select count(*)::int n from information_schema.tables where table_schema = 'clinic'`);
+    check(
+      'the standalone bundle brings all 17 clinic tables',
+      t.rows[0].n === 17,
+      `${t.rows[0].n} tables`
+    );
+
+    // The foundation actually travelled, rather than being assumed present.
+    const fns = await db.query(
+      `select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and proname in ('fold_arabic','normalize_phone','create_account',
+                          'touch_updated_at','email_for_phone','fix_auth_user_tokens')`);
+    check(
+      'and the shared helpers the clinic depends on came with it',
+      fns.rowCount === 6,
+      fns.rows.map((r) => r.proname).sort().join(', ')
+    );
+
+    const seeded = await db.query(
+      `select s.role, s.rx_prefix, p.phone from clinic.staff s
+         join public.profiles p on p.id = s.id where s.role = 'director'`);
+    check(
+      'the first director account exists and can be signed in with',
+      seeded.rowCount === 1 && seeded.rows[0].phone === '01000000009',
+      `${seeded.rows[0]?.phone} · ${seeded.rows[0]?.rx_prefix}`
+    );
+
+    const drugs = await db.query('select count(*)::int n from clinic.drugs');
+    check(
+      'the drug catalogue is seeded in the standalone bundle too',
+      drugs.rows[0].n > 50,
+      `${drugs.rows[0].n} drugs`
+    );
+
+    // NOT the shop. If the bundle quietly dragged the catalogue along, the
+    // owner asked for a separation they did not get.
+    const shopTables = await db.query(
+      `select count(*)::int n from information_schema.tables
+        where table_schema = 'public'
+          and table_name in ('products','order_requests','product_price_tiers')`);
+    check(
+      'and it brings NONE of the shop with it',
+      shopTables.rows[0].n === 0,
+      `${shopTables.rows[0].n} shop tables`
+    );
+
+    // The wall still stands in the standalone database.
+    let leaked = false;
+    try {
+      await db.query('begin');
+      await db.query('set local role anon');
+      await db.query('select * from clinic.patients limit 1');
+      leaked = true;
+    } catch { /* refused */ } finally { await db.query('rollback'); }
+    check('anon is refused in the standalone database as well', !leaked);
+  } catch (e) {
+    check('SETUP-CLINIC-ONLY.sql installs on an empty database', false,
+          String(e.message).slice(0, 160));
+  } finally {
+    if (db) await db.end().catch(() => {});
+    await admin.query('drop database if exists clinic_only').catch(() => {});
+    await admin.end().catch(() => {});
+  }
+}

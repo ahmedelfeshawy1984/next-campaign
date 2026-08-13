@@ -11,6 +11,7 @@
 --      `profiles` with their own table and answer `is_manager()` themselves.
 -- ============================================================================
 
+-- >>> shared-with-clinic
 create or replace function public.my_role()
 returns public.user_role
 language sql stable security definer set search_path = public as $$
@@ -100,3 +101,4 @@ end $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
+-- <<< shared-with-clinic

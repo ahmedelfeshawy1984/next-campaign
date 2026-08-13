@@ -58,6 +58,67 @@ export const env = {
 export const isConfigured =
   !isPlaceholder(env.supabaseUrl) && !isPlaceholder(env.supabaseAnonKey);
 
+// ---------------------------------------------------------------- العيادة ----
+
+/**
+ * The clinic's own Supabase project — patient records on a database of their
+ * own, with none of the shop on it.
+ *
+ * FALLS BACK to the shop's project when these are not set, and that fallback is
+ * deliberate: the clinic shipped inside the shop's project, so an existing
+ * deployment must keep working untouched by anyone who never sets these.
+ *
+ * Setting them is what makes the separation real. Point them at a project
+ * installed from supabase/SETUP-CLINIC-ONLY.sql, which carries the clinic and
+ * the handful of helpers it needs and nothing else — proved on an empty
+ * database by tools/schema-check/clinic.mjs.
+ */
+export const clinicEnv = {
+  supabaseUrl: process.env.NEXT_PUBLIC_CLINIC_SUPABASE_URL || env.supabaseUrl,
+  supabaseAnonKey:
+    process.env.NEXT_PUBLIC_CLINIC_SUPABASE_ANON_KEY || env.supabaseAnonKey,
+};
+
+export const clinicIsConfigured =
+  !isPlaceholder(clinicEnv.supabaseUrl) && !isPlaceholder(clinicEnv.supabaseAnonKey);
+
+/**
+ * Is the clinic actually on its own database, or still sharing the shop's?
+ *
+ * Surfaced in the clinic's settings screen rather than kept as a private
+ * detail: "where do my patient records live" is a question the person
+ * responsible for them should be able to answer by looking, not by trusting
+ * that an environment variable was set correctly six months ago.
+ */
+export const clinicIsSeparate =
+  clinicIsConfigured && clinicEnv.supabaseUrl !== env.supabaseUrl;
+
+/**
+ * The Supabase project the clinic is actually talking to, e.g. `vamnefvim…`.
+ *
+ * ⚠ SHOWN ON THE LOGIN SCREEN, BEFORE ANYONE SIGNS IN, and that is the point.
+ *
+ * Vercel injects environment variables at BUILD time, so saving a new one
+ * changes nothing until the next deploy. Setting the clinic's variables and not
+ * redeploying leaves a site that looks completely correct and is still reading
+ * the old database — and the only symptom is "الموبايل أو كلمة السر غلط",
+ * because the account exists in the project nobody is talking to.
+ *
+ * That failure cost an evening. It is invisible by nature, so the fix is to
+ * make it visible: the login screen says which database it reached, and a
+ * deploy that did not pick up the new variables says so in words.
+ *
+ * The ref is not a secret — it is the hostname of every API call the browser
+ * already makes.
+ */
+export const clinicProjectRef = (() => {
+  try {
+    return new URL(clinicEnv.supabaseUrl).hostname.split('.')[0];
+  } catch {
+    return '';
+  }
+})();
+
 /** Absolute URL for a path — OG tags and sitemaps cannot use relative ones. */
 export function absoluteUrl(path: string): string {
   return `${env.siteUrl}${path.startsWith('/') ? path : `/${path}`}`;

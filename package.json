@@ -9,7 +9,7 @@
   ],
   "comment": "One install at the root. Workspaces exist so tools/preview and tools/web-check can import the harness dependencies without a second 100 MB Postgres download.",
   "scripts": {
-    "db:build": "node tools/build-setup.mjs",
+    "db:build": "node tools/build-setup.mjs && node tools/build-clinic-setup.mjs",
     "db:check": "node tools/schema-check/verify.mjs",
     "preview:dump": "node tools/preview/dump.mjs",
     "preview:start": "npm run preview:dump && npm run preview:on && npm run dev",
