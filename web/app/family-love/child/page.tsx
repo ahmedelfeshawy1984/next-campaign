@@ -2,10 +2,22 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { hasStoredSession, currentDeviceKind } from '@/lib/family-love/session';
+import { hasStoredSession, currentDeviceKind, getAccessToken } from '@/lib/family-love/session';
 import { familyLoveSupabase } from '@/lib/family-love/supabaseBrowser';
+import { familyLoveEnv, familyLovePushIsConfigured } from '@/lib/family-love/env';
+import { setupPushNotifications } from '@/lib/family-love/pushClient';
 import BusStrip from '@/components/family-love/BusStrip';
 import type { BoardTask } from '@/lib/family-love/types';
+
+async function postToFamilyLoveApi(path: string, body: unknown): Promise<boolean> {
+  const token = await getAccessToken();
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(body),
+  });
+  return res.ok;
+}
 
 export default function FamilyLoveChildPage() {
   const router = useRouter();
@@ -13,21 +25,10 @@ export default function FamilyLoveChildPage() {
   const [board, setBoard] = useState<BoardTask[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const [circleId, setCircleId] = useState<string | null>(null);
-  const [childId, setChildId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const sb = familyLoveSupabase();
-    const { data } = await sb.rpc('fl_today_board');
+    const { data } = await familyLoveSupabase().rpc('fl_today_board');
     setBoard((data as BoardTask[]) ?? []);
-
-    // محتاجين family_circle_id/child_profile_id عشان ندخّل صف في location_pings
-    // و alerts مباشرة — الجهاز شايف صف واحد بس بحكم RLS (بتاعه هو).
-    const { data: mine } = await sb.from('child_profiles').select('id, family_circle_id').limit(1).maybeSingle();
-    if (mine) {
-      setChildId((mine as { id: string }).id);
-      setCircleId((mine as { family_circle_id: string }).family_circle_id);
-    }
   }, []);
 
   useEffect(() => {
@@ -48,20 +49,20 @@ export default function FamilyLoveChildPage() {
     }
   }
 
-  async function sendAlert(origin: 'child_sos' | 'child_status', payload: Record<string, unknown>, message: string) {
-    if (!circleId) return;
+  async function sendSos() {
     setBusy(true);
     setNote(null);
-    try {
-      await familyLoveSupabase()
-        .from('alerts')
-        .insert({ family_circle_id: circleId, child_profile_id: childId, origin, payload });
-      setNote(message);
-    } catch {
-      setNote('حصلت مشكلة، جرب تاني.');
-    } finally {
-      setBusy(false);
-    }
+    const ok = await postToFamilyLoveApi('/api/family-love/child/sos', {});
+    setNote(ok ? 'اتبعت طلب اتصال لماما 📞' : 'حصلت مشكلة، جرب تاني.');
+    setBusy(false);
+  }
+
+  async function sendTrouble() {
+    setBusy(true);
+    setNote(null);
+    const ok = await postToFamilyLoveApi('/api/family-love/child/status', { eventKey: 'battery_low' });
+    setNote(ok ? 'اتبعت رسالة إن عندك مشكلة في الموبايل 🔋' : 'حصلت مشكلة، جرب تاني.');
+    setBusy(false);
   }
 
   function sendLocation() {
@@ -73,26 +74,27 @@ export default function FamilyLoveChildPage() {
     setNote(null);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        try {
-          if (circleId && childId) {
-            await familyLoveSupabase().from('location_pings').insert({
-              family_circle_id: circleId,
-              child_profile_id: childId,
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              accuracy_m: position.coords.accuracy,
-            });
-          }
-          setNote('اتبعت موقعك، متقلقيش! 📍');
-        } finally {
-          setBusy(false);
-        }
+        const ok = await postToFamilyLoveApi('/api/family-love/child/location', {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+        setNote(ok ? 'اتبعت موقعك، متقلقيش! 📍' : 'حصلت مشكلة، جرب تاني.');
+        setBusy(false);
       },
       () => {
         setNote('معرفناش نوصل لموقعك — سماح الوصول للموقع من إعدادات الجهاز.');
         setBusy(false);
       }
     );
+  }
+
+  async function enableNotifications() {
+    if (!familyLovePushIsConfigured) return;
+    const result = await setupPushNotifications(familyLoveEnv.vapidPublicKey);
+    if (result === 'subscribed') setNote('التنبيهات شغالة دلوقتي 🔔');
+    else if (result === 'not_installed') setNote('لازم تضيف التطبيق للشاشة الرئيسية الأول عشان التنبيهات تشتغل.');
+    else if (result === 'denied') setNote('لازم تسمح بالإشعارات من إعدادات الجهاز.');
   }
 
   if (!ready) return null;
@@ -103,6 +105,11 @@ export default function FamilyLoveChildPage() {
     <div className="fl__shell">
       <div className="fl__bar">
         <span className="fl__brand">يلا بينا! 👋</span>
+        {familyLovePushIsConfigured && (
+          <button type="button" className="btn btn--ghost btn--sm" onClick={enableNotifications}>
+            🔔
+          </button>
+        )}
       </div>
 
       {note && (
@@ -132,7 +139,7 @@ export default function FamilyLoveChildPage() {
       )}
 
       <div className="fl__actions">
-        <button type="button" className="fl__action fl__action--sos" disabled={busy} onClick={() => sendAlert('child_sos', {}, 'اتبعت طلب اتصال لماما 📞')}>
+        <button type="button" className="fl__action fl__action--sos" disabled={busy} onClick={sendSos}>
           <span className="fl__action-icon">📞</span>
           <span>نبّهي ماما</span>
         </button>
@@ -140,12 +147,7 @@ export default function FamilyLoveChildPage() {
           <span className="fl__action-icon">📍</span>
           <span>ابعت موقعي</span>
         </button>
-        <button
-          type="button"
-          className="fl__action fl__action--trouble"
-          disabled={busy}
-          onClick={() => sendAlert('child_status', { kind: 'trouble' }, 'اتبعت رسالة إن عندك مشكلة في الموبايل 🔋')}
-        >
+        <button type="button" className="fl__action fl__action--trouble" disabled={busy} onClick={sendTrouble}>
           <span className="fl__action-icon">🔋</span>
           <span>عندي مشكلة</span>
         </button>

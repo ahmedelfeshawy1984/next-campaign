@@ -23,6 +23,8 @@ export const familyLoveEnv = {
   vapidPublicKey: process.env.NEXT_PUBLIC_FAMILYLOVE_VAPID_PUBLIC_KEY ?? '',
   /** سيرفر بس. */
   vapidPrivateKey: process.env.FAMILYLOVE_VAPID_PRIVATE_KEY ?? '',
+  /** مطلوب من مواصفة Web Push — إيميل أو رابط تواصل، مش سري. */
+  vapidSubject: process.env.FAMILYLOVE_VAPID_SUBJECT || 'mailto:support@example.com',
 };
 
 export const familyLoveIsConfigured =
@@ -32,3 +34,6 @@ export const familyLoveServerIsConfigured =
   familyLoveIsConfigured &&
   !isPlaceholder(familyLoveEnv.serviceRoleKey) &&
   !isPlaceholder(familyLoveEnv.jwtSecret);
+
+export const familyLovePushIsConfigured =
+  !isPlaceholder(familyLoveEnv.vapidPublicKey) && !isPlaceholder(familyLoveEnv.vapidPrivateKey);

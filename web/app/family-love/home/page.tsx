@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { hasStoredSession, currentDeviceKind, clearSession } from '@/lib/family-love/session';
 import { familyLoveSupabase } from '@/lib/family-love/supabaseBrowser';
 import { qrCodeUrl } from '@/lib/family-love/qr';
+import { familyLoveEnv, familyLovePushIsConfigured } from '@/lib/family-love/env';
+import { setupPushNotifications } from '@/lib/family-love/pushClient';
 import BusStrip from '@/components/family-love/BusStrip';
 import type { BoardTask, ChildProfile } from '@/lib/family-love/types';
 
@@ -114,15 +116,30 @@ export default function FamilyLoveHomePage() {
     router.replace('/family-love');
   }
 
+  async function enableNotifications() {
+    if (!familyLovePushIsConfigured) return;
+    const result = await setupPushNotifications(familyLoveEnv.vapidPublicKey);
+    if (result === 'subscribed') setError(null);
+    else if (result === 'not_installed') setError('لازم تضيف التطبيق للشاشة الرئيسية الأول عشان التنبيهات تشتغل.');
+    else if (result === 'denied') setError('لازم تسمح بالإشعارات من إعدادات الجهاز.');
+  }
+
   if (!ready) return null;
 
   return (
     <div className="fl__shell">
       <div className="fl__bar">
         <span className="fl__brand">عائلتي</span>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>
-          خروج
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {familyLovePushIsConfigured && (
+            <button type="button" className="btn btn--ghost btn--sm" onClick={enableNotifications}>
+              🔔
+            </button>
+          )}
+          <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>
+            خروج
+          </button>
+        </div>
       </div>
 
       {error && <p className="fl__error">{error}</p>}

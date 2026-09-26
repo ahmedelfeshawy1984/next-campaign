@@ -21,6 +21,29 @@
 4. SQL Editor → شغّل ملفات `supabase/family-love/migrations/*.sql` بالترتيب
    (0001 لحد 0005)، وبعدين `supabase/family-love/seed.sql`.
 
+### مفاتيح Web Push (VAPID) — **ده مش محتاج حساب خارجي خالص**
+التنبيهات الفعلية (SOS، الموقع، الرسايل، التذكيرات) شغالة بالكود من دلوقتي
+(`web/lib/family-love/push.ts`)، بس محتاجة مفتاحين توليدهم مرة واحدة بس:
+
+```bash
+cd web && npx web-push generate-vapid-keys
+```
+
+حط الناتج في Vercel:
+- `NEXT_PUBLIC_FAMILYLOVE_VAPID_PUBLIC_KEY`
+- `FAMILYLOVE_VAPID_PRIVATE_KEY` (سري)
+- `FAMILYLOVE_VAPID_SUBJECT` = `mailto:بريدك@دومينك.com` (اختياري، له قيمة افتراضية)
+
+لحد ما المتغيرات دي متظبطة، زرار 🔔 مش هيظهر خالص في الواجهة (مفيش تنبيهات
+وهمية أو معطلة — الميزة بتختفي بدل ما تفشل بصمت).
+
+### إرسال التنبيهات المجدولة (Vercel Cron)
+`web/vercel.json` معمول فيه Cron يضرب `cron/dispatch-reminders` **كل دقيقة**.
+⚠️ **مهم**: خطة Vercel المجانية (Hobby) بتسمح بـCron **مرة واحدة باليوم بس** —
+لازم خطة Pro عشان الجدولة الدقيقة دي تشتغل فعليًا. لو قاعد على Hobby مؤقتًا،
+غيّر `"schedule"` في `web/vercel.json` لحاجة يومية (`"0 6 * * *"` مثلًا) لحد
+ما تترقّى، أو استخدم خدمة خارجية (cron-job.org) تضرب نفس الرابط كل دقيقة.
+
 ### مزوّد OTP (إرسال كود التأكيد)
 دلوقتي بيشتغل بـ "console provider" — بيطبع الكود في اللوج بدل ما يبعت SMS
 حقيقي. ده كويس للتجربة المحلية بس، **مش صالح للنشر الفعلي**. لازم تختار واحد:

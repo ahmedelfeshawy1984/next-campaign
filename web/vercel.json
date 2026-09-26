@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/family-love/cron/dispatch-reminders",
+      "schedule": "* * * * *"
+    }
+  ]
+}
