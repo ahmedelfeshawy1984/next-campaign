@@ -202,7 +202,7 @@ begin
 
   update public.task_occurrences
      set current_station_index = v_next,
-         status = case when v_next >= v_station_count then 'done' else 'in_progress' end,
+         status = (case when v_next >= v_station_count then 'done' else 'in_progress' end)::public.occurrence_status,
          updated_at = now()
    where id = p_occurrence_id
    returning * into v_occ;
