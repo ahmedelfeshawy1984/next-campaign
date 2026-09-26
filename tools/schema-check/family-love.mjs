@@ -325,6 +325,29 @@ try {
     }
   }
   check('recurrence.js (taskOccursOn) agrees with fl_task_occurs_on() on every case', allAgree, `${cases.length} cases`);
+
+  // ---- ٩. ادّعاء التذكيرات المستحقة ذري بلا سباق -----------------------------
+  //
+  // زي فحص كود الربط فوق بالظبط: لو fl_claim_due_reminders() استُدعيت مرتين
+  // (محاكاة لـ cron اتنادى مرتين متقاربتين)، لازم النداء التاني ميرجّعش نفس
+  // التذكير تاني — وإلا الأهل هياخدوا نفس التذكير مرتين.
+
+  const dueAlert = await one(
+    `insert into public.alerts (family_circle_id, origin, scheduled_for, payload)
+     values ($1,'parent_reminder', now() - interval '1 minute', '{"message":"معاد الدوا"}'::jsonb) returning id`,
+    [circA.id]
+  );
+  const futureAlert = await one(
+    `insert into public.alerts (family_circle_id, origin, scheduled_for, payload)
+     values ($1,'parent_reminder', now() + interval '1 hour', '{"message":"لسه بدري"}'::jsonb) returning id`,
+    [circA.id]
+  );
+
+  const firstClaim = (await client.query(`select * from public.fl_claim_due_reminders()`)).rows;
+  check('claiming due reminders picks up the overdue one only', firstClaim.some((r) => r.id === dueAlert.id) && !firstClaim.some((r) => r.id === futureAlert.id));
+
+  const secondClaim = (await client.query(`select * from public.fl_claim_due_reminders()`)).rows;
+  check('a reminder already claimed cannot be claimed again by a concurrent/duplicate cron run', !secondClaim.some((r) => r.id === dueAlert.id));
 } catch (e) {
   check('the harness ran to the end', false, `${e.message}`.slice(0, 300));
   console.error(e);

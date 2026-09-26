@@ -3,18 +3,16 @@ import { familyLoveAdmin } from '@/lib/family-love/supabaseAdmin';
 import { parentRecipientsForCircle, sendPushToDeviceSessions } from '@/lib/family-love/push';
 
 // هدف Vercel Cron (web/vercel.json). بيدوّر على أي تذكير معاده وصل ولسه ما
-// اتبعتش، يبعت Web Push، ويعلّمه fired_at عشان ميتكررش. Vercel Cron بيبعت
-// GET افتراضيًا، فمعمول POST وGET سوا.
+// اتبعتش، يبعت Web Push. Vercel Cron بيبعت GET افتراضيًا، فمعمول POST وGET سوا.
+//
+// fl_claim_due_reminders() بتـ"ادّعي" الصفوف (تحط fired_at) في نفس الأمر اللي
+// بيفحص الشروط — UPDATE ذري واحد، مش SELECT منفصل عن UPDATE لاحق زي قبل. ده
+// بيمنع سباق لو الـ cron اتنادى مرتين متقاربتين (خدمة خارجية أو إعادة محاولة)
+// من إرسال نفس التذكير مرتين — نفس أسلوب إصلاح فل_redeem_pairing_token.
 async function dispatch(): Promise<NextResponse> {
   const admin = familyLoveAdmin();
 
-  const { data: due } = await admin
-    .from('alerts')
-    .select('id, family_circle_id, payload')
-    .eq('origin', 'parent_reminder')
-    .is('fired_at', null)
-    .lte('scheduled_for', new Date().toISOString());
-
+  const { data: due } = await admin.rpc('fl_claim_due_reminders');
   const rows = (due ?? []) as Array<{ id: string; family_circle_id: string; payload: { message?: string } }>;
 
   for (const alert of rows) {
@@ -23,7 +21,6 @@ async function dispatch(): Promise<NextResponse> {
       recipients.map((r) => r.deviceSessionId),
       { title: 'تذكير ⏰', body: alert.payload?.message ?? 'عندك تذكير', url: '/family-love/reminders' }
     );
-    await admin.from('alerts').update({ fired_at: new Date().toISOString() }).eq('id', alert.id);
   }
 
   return NextResponse.json({ processed: rows.length });
