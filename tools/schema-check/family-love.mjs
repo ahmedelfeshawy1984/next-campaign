@@ -70,6 +70,7 @@ async function asUserCommitted(uid, fn) {
 
 const A1 = 'a0000000-0000-0000-0000-000000000001'; // جهاز الأب/الأم — دائرة A
 const A2 = 'a0000000-0000-0000-0000-000000000002'; // جهاز الطفل — دائرة A
+const B1 = 'b0000000-0000-0000-0000-000000000001'; // جهاز الأب/الأم — دائرة B
 const B2 = 'b0000000-0000-0000-0000-000000000002'; // جهاز الطفل — دائرة B
 
 try {
@@ -127,10 +128,18 @@ try {
   const circB = await one(`insert into public.family_circles (owner_account_id, name) values ($1,'دائرة B') returning id`, [
     accountB.id,
   ]);
+  await client.query(`insert into public.family_members (family_circle_id, account_id, is_owner) values ($1,$2,true)`, [
+    circB.id,
+    accountB.id,
+  ]);
   const childB = await one(
     `insert into public.child_profiles (family_circle_id, display_name) values ($1,'سارة') returning id`,
     [circB.id]
   );
+  await client.query(`insert into public.device_sessions (id, kind, account_id, token_hash) values ($1,'parent',$2,'x')`, [
+    B1,
+    accountB.id,
+  ]);
   await client.query(`insert into public.device_sessions (id, kind, child_profile_id, token_hash) values ($1,'child',$2,'x')`, [
     B2,
     childB.id,
@@ -266,6 +275,33 @@ try {
       'a fresh circle starts in trial with a future trial_ends_at',
       ent.e.status === 'trialing' && new Date(ent.e.trial_ends_at) > new Date()
     );
+  });
+
+  // ---- ٧ب. إدارة الأجهزة: القايمة + السحب --------------------------------------
+
+  await asUser(client, A1, async () => {
+    const devices = (await client.query(`select * from public.fl_my_circle_devices()`)).rows;
+    const ids = devices.map((d) => d.id);
+    // >= 2 مش === 2: قسم كود الربط فوق عمدًا عمل جهاز طفل تالت لنفس الطفل
+    // (تجربة "استبدال الكود من جهاز جديد") — العدد بيتغيّر بتغيّر الفكستشرز
+    // اللي قبله، لكن A1 وA2 لازم يفضلوا موجودين مهما حصل.
+    check("parent A sees circle A's own parent and child devices", ids.includes(A1) && ids.includes(A2) && devices.length >= 2);
+  });
+
+  let crossCircleRevokeFailed = false;
+  await asUser(client, B1, async () => {
+    try {
+      await client.query(`select public.fl_revoke_device($1)`, [A2]);
+    } catch {
+      crossCircleRevokeFailed = true;
+    }
+  });
+  check('parent B cannot revoke a device belonging to circle A', crossCircleRevokeFailed);
+
+  await asUserCommitted(A1, () => client.query(`select public.fl_revoke_device($1)`, [A2]));
+  await asUser(client, A2, async () => {
+    const after = await one(`select public.fl_my_circle() c`);
+    check('the revoked child device loses circle access immediately', after.c === null);
   });
 
   // ---- ٨. recurrence.js متطابق مع fl_task_occurs_on() ---------------------------
