@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { hasStoredSession, currentDeviceKind } from '@/lib/family-love/session';
 import { familyLoveSupabase } from '@/lib/family-love/supabaseBrowser';
 import type { ChildProfile } from '@/lib/family-love/types';
-import type { RecurrenceRule } from '@/lib/family-love/recurrence';
+import type { RecurrenceRule } from '@/lib/family-love/recurrence.js';
 
 const WEEKDAYS = ['الأحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
 
