@@ -59,17 +59,12 @@ cd web && npx web-push generate-vapid-keys
 غيّر `"schedule"` في `web/vercel.json` لحاجة يومية (`"0 6 * * *"` مثلًا) لحد
 ما تترقّى، أو استخدم خدمة خارجية (cron-job.org) تضرب نفس الرابط كل دقيقة.
 
-### مزوّد OTP (إرسال كود التأكيد)
-دلوقتي بيشتغل بـ "console provider" — بيطبع الكود في اللوج بدل ما يبعت SMS
-حقيقي. ده كويس للتجربة المحلية بس، **مش صالح للنشر الفعلي**. لازم تختار واحد:
-- **Twilio Verify** (موصى بيه — نفس الـ API لـ SMS وWhatsApp): افتح حساب،
-  اعمل Verify Service، وحط:
-  - `FAMILYLOVE_TWILIO_ACCOUNT_SID`
-  - `FAMILYLOVE_TWILIO_AUTH_TOKEN`
-  - `FAMILYLOVE_TWILIO_VERIFY_SID`
-  - `FAMILYLOVE_OTP_CHANNEL` = `sms` أو `whatsapp`
-- أو بوابة SMS محلية / WhatsApp Cloud API مباشرة — التبديل محصور في ملف واحد:
-  `web/lib/family-love/otpProvider.ts`.
+### تسجيل دخول الأب/الأم
+رقم موبايل + باسورد عادي (مش OTP) — أول مرة بيتعمل الحساب تلقائي بنفس
+البيانات، والمرات اللي بعدها لازم نفس الباسورد. مفيش حاجة تتظبط هنا، شغال
+من غير أي حساب خارجي (لا Twilio ولا غيره). الباسورد متخزن كـ hash (scrypt)
+في `password_hash`، ومحجوب عمدًا عن أي استعلام من جانب المتصفح حتى لو الجلسة
+بتاعة الأب/الأم نفسه (`web/lib/family-love/password.ts`).
 
 ### بوابة دفع لمستخدمي آيفون/الويب
 اللي بيوصلوا عن طريق الرابط المشارك (مش من جوجل بلاي) محتاجين بوابة دفع ويب

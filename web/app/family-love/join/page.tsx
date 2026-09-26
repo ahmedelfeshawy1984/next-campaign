@@ -4,37 +4,15 @@ import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { saveSession } from '@/lib/family-love/session';
 
-type Step = 'phone' | 'code';
-
 function JoinForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [invite] = useState(searchParams.get('code') ?? '');
-  const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState('');
-  const [otpCode, setOtpCode] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function requestCode(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/family-love/otp/request', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ phone }),
-      });
-      if (!res.ok) throw new Error();
-      setStep('code');
-    } catch {
-      setError('رقم التليفون مش صحيح.');
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function join(event: FormEvent) {
     event.preventDefault();
@@ -44,9 +22,14 @@ function JoinForm() {
       const res = await fetch('/api/family-love/members/join', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ code: invite, phone, otpCode, fullName }),
+        body: JSON.stringify({ code: invite, phone, password, fullName }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (data?.error === 'WRONG_PASSWORD') setError('الباسورد غلط.');
+        else setError('كود الدعوة أو البيانات مش صحيحة.');
+        return;
+      }
       const data = (await res.json()) as { accessToken: string; refreshToken: string; expiresIn: number };
       saveSession({
         refreshToken: data.refreshToken,
@@ -56,7 +39,7 @@ function JoinForm() {
       });
       router.replace('/family-love/home');
     } catch {
-      setError('كود الدعوة أو كود التأكيد مش صحيح.');
+      setError('حصلت مشكلة، جرب تاني.');
     } finally {
       setBusy(false);
     }
@@ -75,44 +58,39 @@ function JoinForm() {
       </div>
 
       <div className="fl__card">
-        {step === 'phone' ? (
-          <form onSubmit={requestCode}>
-            <label htmlFor="fl-join-name">اسمك</label>
-            <input id="fl-join-name" className="fl__input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            <label htmlFor="fl-join-phone">رقم موبايلك</label>
-            <input
-              id="fl-join-phone"
-              className="fl__input"
-              type="tel"
-              inputMode="numeric"
-              placeholder="01xxxxxxxxx"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-            {error && <p className="fl__error">{error}</p>}
-            <button type="submit" className="btn btn--brand" disabled={busy} style={{ inlineSize: '100%', marginBlockStart: 12 }}>
-              {busy ? 'جاري الإرسال...' : 'ابعتلي الكود'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={join}>
-            <label htmlFor="fl-join-otp">كود التأكيد</label>
-            <input
-              id="fl-join-otp"
-              className="fl__input"
-              type="text"
-              inputMode="numeric"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-              required
-            />
-            {error && <p className="fl__error">{error}</p>}
-            <button type="submit" className="btn btn--brand" disabled={busy} style={{ inlineSize: '100%', marginBlockStart: 12 }}>
-              {busy ? 'جاري الدخول...' : 'انضم للعيلة'}
-            </button>
-          </form>
-        )}
+        <form onSubmit={join}>
+          <label htmlFor="fl-join-name">اسمك</label>
+          <input id="fl-join-name" className="fl__input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+
+          <label htmlFor="fl-join-phone">رقم موبايلك</label>
+          <input
+            id="fl-join-phone"
+            className="fl__input"
+            type="tel"
+            inputMode="numeric"
+            placeholder="01xxxxxxxxx"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+
+          <label htmlFor="fl-join-password">الباسورد (أول مرة بتحطه، أو باسوردك لو عندك حساب)</label>
+          <input
+            id="fl-join-password"
+            className="fl__input"
+            type="password"
+            placeholder="٦ حروف/أرقام على الأقل"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            minLength={6}
+            required
+          />
+
+          {error && <p className="fl__error">{error}</p>}
+          <button type="submit" className="btn btn--brand" disabled={busy} style={{ inlineSize: '100%', marginBlockStart: 12 }}>
+            {busy ? 'جاري الدخول...' : 'انضم للعيلة'}
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -304,6 +304,33 @@ try {
     check('the revoked child device loses circle access immediately', after.c === null);
   });
 
+  // ---- ٧ج. باسورد الأب/الأم: يتسجل مرة واحدة بس، ومحجوب عن authenticated ------
+
+  const passAccount = await one(`select * from public.fl_upsert_parent_account($1, $2, $3)`, [
+    '01033333333',
+    'تجربة باسورد',
+    'scrypt$abc$def',
+  ]);
+  check('fl_upsert_parent_account sets password_hash on first insert', passAccount.password_hash === 'scrypt$abc$def');
+
+  const passAccountAgain = await one(`select * from public.fl_upsert_parent_account($1, $2, $3)`, [
+    '01033333333',
+    'اسم جديد',
+    'scrypt$other$hash',
+  ]);
+  check('a second call does not overwrite the existing password_hash', passAccountAgain.password_hash === 'scrypt$abc$def');
+  check('a second call still updates full_name', passAccountAgain.full_name === 'اسم جديد');
+
+  let passwordColumnBlocked = false;
+  await asUser(client, A1, async () => {
+    try {
+      await client.query(`select password_hash from public.accounts where id = public.fl_my_account_id()`);
+    } catch {
+      passwordColumnBlocked = true;
+    }
+  });
+  check('authenticated role cannot select the password_hash column', passwordColumnBlocked);
+
   // ---- ٨. recurrence.js متطابق مع fl_task_occurs_on() ---------------------------
 
   const cases = [

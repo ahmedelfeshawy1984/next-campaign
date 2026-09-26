@@ -4,46 +4,30 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveSession } from '@/lib/family-love/session';
 
-type Step = 'phone' | 'code';
-
 export default function FamilyLoveLoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('phone');
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function requestCode(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/family-love/otp/request', {
+      const res = await fetch('/api/family-love/auth/password', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, password, fullName }),
       });
-      if (!res.ok) throw new Error();
-      setStep('code');
-    } catch {
-      setError('رقم التليفون مش صحيح — لازم يكون رقم موبايل مصري.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verifyCode(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/family-love/otp/verify', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ phone, code }),
-      });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (data?.error === 'WRONG_PASSWORD') setError('الباسورد غلط.');
+        else setError('رقم التليفون أو الباسورد مش صحيحين — الباسورد لازم يكون ٦ حروف/أرقام على الأقل.');
+        return;
+      }
       const data = (await res.json()) as { accessToken: string; refreshToken: string; expiresIn: number };
       saveSession({
         refreshToken: data.refreshToken,
@@ -53,7 +37,7 @@ export default function FamilyLoveLoginPage() {
       });
       router.replace('/family-love/home');
     } catch {
-      setError('الكود مش صحيح، جرب تاني.');
+      setError('حصلت مشكلة، جرب تاني.');
     } finally {
       setBusy(false);
     }
@@ -66,55 +50,47 @@ export default function FamilyLoveLoginPage() {
       </div>
 
       <div className="fl__card">
-        {step === 'phone' ? (
-          <form onSubmit={requestCode}>
-            <h1 style={{ marginBlock: '0 4px', fontSize: '1.1rem' }}>سجّل برقم تليفونك</h1>
-            <p className="fl__muted">هنبعتلك كود تأكيد، من غير أي باسورد.</p>
-            <label htmlFor="fl-phone">رقم الموبايل</label>
-            <input
-              id="fl-phone"
-              className="fl__input"
-              type="tel"
-              inputMode="numeric"
-              placeholder="01xxxxxxxxx"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-            {error && <p className="fl__error">{error}</p>}
-            <button type="submit" className="btn btn--brand" disabled={busy} style={{ inlineSize: '100%', marginBlockStart: 12 }}>
-              {busy ? 'جاري الإرسال...' : 'ابعتلي الكود'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verifyCode}>
-            <h1 style={{ marginBlock: '0 4px', fontSize: '1.1rem' }}>اكتب الكود</h1>
-            <p className="fl__muted">اتبعت كود لرقم {phone}.</p>
-            <label htmlFor="fl-code">كود التأكيد</label>
-            <input
-              id="fl-code"
-              className="fl__input"
-              type="text"
-              inputMode="numeric"
-              placeholder="000000"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              required
-            />
-            {error && <p className="fl__error">{error}</p>}
-            <button type="submit" className="btn btn--brand" disabled={busy} style={{ inlineSize: '100%', marginBlockStart: 12 }}>
-              {busy ? 'جاري التأكيد...' : 'ادخل'}
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost"
-              onClick={() => setStep('phone')}
-              style={{ inlineSize: '100%', marginBlockStart: 8 }}
-            >
-              غيّر الرقم
-            </button>
-          </form>
-        )}
+        <form onSubmit={submit}>
+          <h1 style={{ marginBlock: '0 4px', fontSize: '1.1rem' }}>دخول أو تسجيل</h1>
+          <p className="fl__muted">أول مرة؟ هيتعمل حسابك تلقائي بنفس البيانات دي.</p>
+
+          <label htmlFor="fl-name">اسمك (أول مرة بس)</label>
+          <input
+            id="fl-name"
+            className="fl__input"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+
+          <label htmlFor="fl-phone">رقم الموبايل</label>
+          <input
+            id="fl-phone"
+            className="fl__input"
+            type="tel"
+            inputMode="numeric"
+            placeholder="01xxxxxxxxx"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+
+          <label htmlFor="fl-password">الباسورد</label>
+          <input
+            id="fl-password"
+            className="fl__input"
+            type="password"
+            placeholder="٦ حروف/أرقام على الأقل"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            minLength={6}
+            required
+          />
+
+          {error && <p className="fl__error">{error}</p>}
+          <button type="submit" className="btn btn--brand" disabled={busy} style={{ inlineSize: '100%', marginBlockStart: 12 }}>
+            {busy ? 'جاري الدخول...' : 'ادخل'}
+          </button>
+        </form>
       </div>
     </div>
   );

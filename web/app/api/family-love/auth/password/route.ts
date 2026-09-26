@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server';
 import { isEgMobile, normalizePhone } from '@/lib/phone.js';
-import { getOtpProvider } from '@/lib/family-love/otpProvider';
 import { familyLoveAdmin } from '@/lib/family-love/supabaseAdmin';
 import { generateRefreshToken, hashRefreshToken, signFlJwt } from '@/lib/family-love/jwt';
 import { familyLoveEnv } from '@/lib/family-love/env';
 import { ACCESS_TOKEN_TTL_SECONDS } from '@/lib/family-love/constants';
+import { hashPassword, verifyPassword } from '@/lib/family-love/password';
 
 interface Account {
   id: string;
   phone: string;
   full_name: string | null;
+  password_hash: string | null;
 }
 
+// دخول/تسجيل الأب أو الأم في طلب واحد: رقم مش موجود قبل كده -> يتعمله حساب
+// بالباسورد ده، رقم موجود -> لازم الباسورد يطابق اللي متسجل.
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -20,29 +23,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 });
   }
 
-  const { phone: rawPhone, code, fullName } = (body ?? {}) as {
+  const { phone: rawPhone, password, fullName } = (body ?? {}) as {
     phone?: string;
-    code?: string;
+    password?: string;
     fullName?: string;
   };
   const phone = normalizePhone(rawPhone ?? '');
-  if (!isEgMobile(phone) || !code) {
+  if (!isEgMobile(phone) || typeof password !== 'string' || password.length < 6) {
     return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 });
-  }
-
-  const codeOk = await getOtpProvider().checkCode(phone, code);
-  if (!codeOk) {
-    return NextResponse.json({ error: 'CODE_INVALID' }, { status: 401 });
   }
 
   const admin = familyLoveAdmin();
 
-  const { data: account, error: accountError } = await admin
-    .rpc('fl_upsert_parent_account', { p_phone: phone, p_full_name: fullName ?? null })
-    .single<Account>();
+  const { data: existing } = await admin
+    .from('accounts')
+    .select('id, phone, full_name, password_hash')
+    .eq('phone', phone)
+    .maybeSingle<Account>();
 
-  if (accountError || !account) {
-    return NextResponse.json({ error: 'ACCOUNT_FAILED' }, { status: 500 });
+  let account: { id: string; phone: string; full_name: string | null };
+
+  if (existing) {
+    if (!existing.password_hash || !verifyPassword(password, existing.password_hash)) {
+      return NextResponse.json({ error: 'WRONG_PASSWORD' }, { status: 401 });
+    }
+    account = existing;
+  } else {
+    const { data: created, error: createError } = await admin
+      .rpc('fl_upsert_parent_account', {
+        p_phone: phone,
+        p_full_name: fullName ?? null,
+        p_password_hash: hashPassword(password),
+      })
+      .single<Account>();
+    if (createError || !created) {
+      return NextResponse.json({ error: 'ACCOUNT_FAILED' }, { status: 500 });
+    }
+    account = created;
   }
 
   const { data: member } = await admin

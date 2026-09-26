@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { isEgMobile, normalizePhone } from '@/lib/phone.js';
-import { getOtpProvider } from '@/lib/family-love/otpProvider';
 import { familyLoveAdmin } from '@/lib/family-love/supabaseAdmin';
 import { generateRefreshToken, hashRefreshToken, signFlJwt } from '@/lib/family-love/jwt';
 import { familyLoveEnv } from '@/lib/family-love/env';
 import { ACCESS_TOKEN_TTL_SECONDS } from '@/lib/family-love/constants';
+import { hashPassword, verifyPassword } from '@/lib/family-love/password';
 
 interface FamilyMember {
   id: string;
@@ -12,8 +12,14 @@ interface FamilyMember {
   family_circle_id: string;
 }
 
-// انضمام فرد عيلة مدعو (زوج/جدة/إلخ) — بيجمع خطوتين مع بعض: التحقق من الـ
-// OTP بتاع رقمه، واستبدال كود الدعوة، عشان يبقى بالظبط طلب واحد من الواجهة.
+interface Account {
+  id: string;
+  password_hash: string | null;
+}
+
+// انضمام فرد عيلة مدعو (زوج/جدة/إلخ) — بيجمع خطوتين مع بعض: التحقق من
+// الباسورد بتاع رقمه (أو تسجيله لأول مرة)، واستبدال كود الدعوة، عشان يبقى
+// بالظبط طلب واحد من الواجهة.
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -22,27 +28,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 });
   }
 
-  const { code, phone: rawPhone, otpCode, fullName } = (body ?? {}) as {
+  const { code, phone: rawPhone, password, fullName } = (body ?? {}) as {
     code?: string;
     phone?: string;
-    otpCode?: string;
+    password?: string;
     fullName?: string;
   };
 
   const phone = normalizePhone(rawPhone ?? '');
-  if (!code?.trim() || !isEgMobile(phone) || !otpCode) {
+  if (!code?.trim() || !isEgMobile(phone) || typeof password !== 'string' || password.length < 6) {
     return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 });
-  }
-
-  const codeOk = await getOtpProvider().checkCode(phone, otpCode);
-  if (!codeOk) {
-    return NextResponse.json({ error: 'CODE_INVALID' }, { status: 401 });
   }
 
   const admin = familyLoveAdmin();
 
+  const { data: existing } = await admin
+    .from('accounts')
+    .select('id, password_hash')
+    .eq('phone', phone)
+    .maybeSingle<Account>();
+
+  if (existing && (!existing.password_hash || !verifyPassword(password, existing.password_hash))) {
+    return NextResponse.json({ error: 'WRONG_PASSWORD' }, { status: 401 });
+  }
+
   const { data: member, error: memberError } = await admin
-    .rpc('fl_redeem_member_invite', { p_code: code, p_phone: phone, p_full_name: fullName ?? null })
+    .rpc('fl_redeem_member_invite', {
+      p_code: code,
+      p_phone: phone,
+      p_full_name: fullName ?? null,
+      p_password_hash: existing ? null : hashPassword(password),
+    })
     .single<FamilyMember>();
 
   if (memberError || !member) {
