@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   // المستودع، مش جزء من الشوب.
   robots: { index: false, follow: false, nocache: true },
   manifest: '/family-love.webmanifest',
+  // سفاري مابيرندرش SVG لأيقونة الشاشة الرئيسية — لازم PNG حقيقي هنا.
+  icons: { apple: '/family-love-apple-touch-icon.png' },
   appleWebApp: { capable: true, title: 'عائلتي', statusBarStyle: 'default' },
 };
 

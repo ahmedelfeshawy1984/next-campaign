@@ -1,0 +1,31 @@
+{
+  "name": "عائلتي — Family Love",
+  "short_name": "عائلتي",
+  "description": "متابعة يومية بين الأهل والطفل — مهام ومحطات، تنبيهات، وموقع لحظي",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/family-love",
+  "scope": "/family-love/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fffdf9",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/family-love-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/family-love-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "الأطفال", "url": "/family-love/home" },
+    { "name": "شاشة الطفل", "url": "/family-love/child" }
+  ]
+}
