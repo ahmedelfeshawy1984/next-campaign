@@ -244,13 +244,13 @@ try {
   );
   await client.query(`select public.fl_mark_pairing_token_redeemed($1, $2)`, [pairing.id, newChildDevice.id]);
 
-  let secondPairingRedeemFailed = false;
-  try {
-    await client.query(`select public.fl_redeem_pairing_token($1)`, [pairing.code]);
-  } catch {
-    secondPairingRedeemFailed = true;
-  }
-  check('a pairing code cannot be redeemed twice', secondPairingRedeemFailed);
+  // fl_redeem_pairing_token() بقت تدّعي الصف ذريًا (UPDATE ... RETURNING *)
+  // بدل SELECT FOR UPDATE منفصل عن التحديث — سباق طلبين متزامنين مستحيل
+  // دلوقتي. النتيجة على كود مستهلك: صف واحد بكل حقوله null (مش exception،
+  // ومش صفر صفوف) — طبيعة "function في FROM clause" في Postgres، وده بالظبط
+  // اللي route.ts بيفحصه فعليًا (pairing?.id) بدل ما يعتمد على try/catch.
+  const secondRedeem = await one(`select * from public.fl_redeem_pairing_token($1)`, [pairing.code]);
+  check('a pairing code cannot be redeemed twice', secondRedeem.id === null);
 
   // ---- ٦. دعوة فرد العيلة: بتضم لنفس الدائرة، استخدام واحد بس -----------------
 

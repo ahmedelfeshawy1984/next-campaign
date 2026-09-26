@@ -31,13 +31,16 @@ export async function POST(request: Request) {
 
   const admin = familyLoveAdmin();
 
-  // fl_redeem_pairing_token بس بيتأكد ويرجّع الصف — مش بيعلّمه redeemed لسه،
-  // عشان نضمن إن الجهاز اتسجل فعلاً قبل ما نستهلك الكود.
+  // fl_redeem_pairing_token بقت تدّعي الصف (تحط redeemed_at) في نفس التحديث
+  // اللي بيفحص الشروط — تحديث ذري بيمنع سباق طلبين متزامنين بنفس الكود.
+  // كود مش صحيح/منتهي بيرجّع صف واحد بس بكل حقوله null (مش صفر صفوف ولا
+  // exception — دي طبيعة "SELECT * FROM دالة" في Postgres)، فلازم نفحص حقل
+  // فعلي زي id مش بس truthiness الكائن نفسه.
   const { data: pairing, error: pairingError } = await admin
     .rpc('fl_redeem_pairing_token', { p_code: code })
     .single<PairingToken>();
 
-  if (pairingError || !pairing) {
+  if (pairingError || !pairing?.id) {
     return NextResponse.json({ error: 'CODE_INVALID_OR_EXPIRED' }, { status: 401 });
   }
 
