@@ -14,6 +14,12 @@ interface PairingInfo {
   link: string;
 }
 
+interface AdCreative {
+  image_url: string;
+  headline: string | null;
+  target_url: string | null;
+}
+
 export default function FamilyLoveHomePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -23,6 +29,19 @@ export default function FamilyLoveHomePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pairing, setPairing] = useState<Record<string, PairingInfo>>({});
+  const [ad, setAd] = useState<AdCreative | null>(null);
+
+  const loadAd = useCallback(async () => {
+    const sb = familyLoveSupabase();
+    const { data: circle } = await sb.from('family_circles').select('governorate, city').maybeSingle<{
+      governorate: string | null;
+      city: string | null;
+    }>();
+    const { data } = await sb
+      .rpc('fl_active_ad', { p_governorate: circle?.governorate ?? null, p_city: circle?.city ?? null })
+      .maybeSingle<AdCreative>();
+    setAd(data ?? null);
+  }, []);
 
   const loadChildren = useCallback(async () => {
     const sb = familyLoveSupabase();
@@ -48,8 +67,8 @@ export default function FamilyLoveHomePage() {
       router.replace('/family-love/login');
       return;
     }
-    loadChildren().finally(() => setReady(true));
-  }, [router, loadChildren]);
+    Promise.all([loadChildren(), loadAd()]).finally(() => setReady(true));
+  }, [router, loadChildren, loadAd]);
 
   async function addChild(event: React.FormEvent) {
     event.preventDefault();
@@ -172,16 +191,31 @@ export default function FamilyLoveHomePage() {
         </button>
       </form>
 
-      <Link href="/family-love/circle" className="btn btn--ghost" style={{ inlineSize: '100%', display: 'block', textAlign: 'center', marginBlockEnd: 10 }}>
-        👪 أفراد العيلة
-      </Link>
-
-      <div className="fl__ad">
-        <div style={{ blockSize: 84, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fl-tint)', color: 'var(--fl)', fontWeight: 700, fontSize: '0.85rem' }}>
-          [مساحة إعلان]
-        </div>
-        <span className="fl__ad-tag">إعلان</span>
+      <div style={{ display: 'flex', gap: 8, marginBlockEnd: 10 }}>
+        <Link href="/family-love/circle" className="btn btn--ghost" style={{ flex: 1, display: 'block', textAlign: 'center' }}>
+          👪 أفراد العيلة
+        </Link>
+        <Link href="/family-love/messages" className="btn btn--ghost" style={{ flex: 1, display: 'block', textAlign: 'center' }}>
+          💬 الرسايل
+        </Link>
+        <Link href="/family-love/reminders" className="btn btn--ghost" style={{ flex: 1, display: 'block', textAlign: 'center' }}>
+          ⏰ التنبيهات
+        </Link>
       </div>
+
+      {ad && (
+        <a
+          className="fl__ad"
+          href={ad.target_url ?? undefined}
+          target={ad.target_url ? '_blank' : undefined}
+          rel={ad.target_url ? 'noopener noreferrer' : undefined}
+          style={{ display: 'block' }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- إعلان مرفوع كصورة، مش أصول محلية */}
+          <img src={ad.image_url} alt={ad.headline ?? 'إعلان'} />
+          <span className="fl__ad-tag">إعلان</span>
+        </a>
+      )}
     </div>
   );
 }
