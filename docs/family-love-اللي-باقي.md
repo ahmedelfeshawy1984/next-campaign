@@ -6,6 +6,18 @@
 
 ---
 
+## ٠. تفعيل حساب مسؤول (لإدارة الإعلانات)
+
+صفحة `/family-love/admin` (إضافة/إيقاف/حذف إعلانات البانر) محصورة بحساب
+عليه `accounts.is_platform_admin = true`. مفيش واجهة لترقية حساب لأدمن عمدًا —
+فعل نادر مش يستاهل شاشة. من Supabase dashboard:
+
+```sql
+update public.accounts set is_platform_admin = true where phone = '01xxxxxxxxx';
+```
+
+---
+
 ## ١. حسابات لازم تتعمل (مش قرارات تقنية)
 
 ### مشروع Supabase مستقل لـ Family Love
