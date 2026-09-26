@@ -4,11 +4,11 @@
 // مفيش مفتاح service role هنا خالص). الفرق الجوهري عن عميل الشوب/العيادة: مفيش
 // جلسة Supabase Auth حقيقية أبدًا — الـ fetch المخصص بيحقن توكن الجهاز
 // (JWT مخصص، من session.ts) في كل طلب، وده اللي auth.uid() بيقراه في RLS.
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { familyLoveEnv, familyLoveIsConfigured } from './env';
 import { getAccessToken } from './session';
 
-function create() {
+function create(): SupabaseClient {
   return createClient(familyLoveEnv.supabaseUrl, familyLoveEnv.supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
@@ -22,9 +22,9 @@ function create() {
   });
 }
 
-let cached: ReturnType<typeof create> | null = null;
+let cached: SupabaseClient | null = null;
 
-export function familyLoveSupabase(): ReturnType<typeof create> {
+export function familyLoveSupabase(): SupabaseClient {
   if (!familyLoveIsConfigured) {
     throw new Error('Family Love: Supabase is not configured');
   }

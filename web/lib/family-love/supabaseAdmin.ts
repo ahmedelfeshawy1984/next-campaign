@@ -6,12 +6,12 @@
 // ملاحظة: عمدًا بلا حزمة `server-only` (المستودع مفيهوش أي اعتماديات زيادة
 // عن next/react/supabase-js) — الحماية الفعلية إن الملف ده ميتفتحش غير من
 // جوه web/app/api/family-love/**، اللي أصلاً كود سيرفر بحكم Next.js نفسه.
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { familyLoveEnv, familyLoveServerIsConfigured } from './env';
 
-let cached: ReturnType<typeof createClient> | null = null;
+let cached: SupabaseClient | null = null;
 
-export function familyLoveAdmin(): ReturnType<typeof createClient> {
+export function familyLoveAdmin(): SupabaseClient {
   if (!familyLoveServerIsConfigured) {
     throw new Error('Family Love: Supabase server config missing');
   }
