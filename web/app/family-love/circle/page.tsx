@@ -74,13 +74,16 @@ export default function FamilyLoveCirclePage() {
         <ul className="fl__list">
           {members.map((member) => (
             <li key={member.id}>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700 }}>{member.display_name || RELATION_LABELS[member.relation_type]}</div>
                 <div className="fl__muted">
                   {RELATION_LABELS[member.relation_type]}
                   {member.is_owner ? ' — صاحب/ة الحساب' : ''}
                 </div>
               </div>
+              <Link href={`/family-love/circle/${member.id}`} className="btn btn--ghost btn--sm">
+                تعديل
+              </Link>
             </li>
           ))}
         </ul>

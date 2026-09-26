@@ -136,6 +136,9 @@ export default function FamilyLoveHomePage() {
               🔔
             </button>
           )}
+          <Link href="/family-love/settings" className="btn btn--ghost btn--sm">
+            ⚙️
+          </Link>
           <button type="button" className="btn btn--ghost btn--sm" onClick={signOut}>
             خروج
           </button>
@@ -174,6 +177,11 @@ export default function FamilyLoveHomePage() {
               <Link href={`/family-love/tasks/new?child=${child.id}`} className="btn btn--brand btn--sm">
                 مهمة جديدة
               </Link>
+              {activeTask && (
+                <Link href={`/family-love/tasks/${activeTask.task_id}`} className="btn btn--ghost btn--sm">
+                  تعديل المهمة
+                </Link>
+              )}
               <button type="button" className="btn btn--ghost btn--sm" onClick={() => createPairingLink(child.id)} disabled={busy}>
                 ربط جهاز الطفل
               </button>
