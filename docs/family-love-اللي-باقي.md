@@ -31,7 +31,10 @@ update public.accounts set is_platform_admin = true where phone = '01xxxxxxxxx';
    - `FAMILYLOVE_SUPABASE_SERVICE_ROLE_KEY` (سري — سيرفر بس)
    - `FAMILYLOVE_SUPABASE_JWT_SECRET` (سري — سيرفر بس)
 4. SQL Editor → شغّل ملفات `supabase/family-love/migrations/*.sql` بالترتيب
-   (0001 لحد 0005)، وبعدين `supabase/family-love/seed.sql`.
+   (0001 لحد 0006)، وبعدين `supabase/family-love/seed.sql`.
+5. **مهم عشان شريط الباص يبقى حي فعليًا**: Database → Replication → فعّل
+   Realtime على جدول `task_occurrences`. من غيرها الشاشة بتشتغل عادي بس
+   محتاجة تحديث الصفحة يدويًا بدل ما تتحرك لحظة ما الطفل يضغط.
 
 ### مفاتيح Web Push (VAPID) — **ده مش محتاج حساب خارجي خالص**
 التنبيهات الفعلية (SOS، الموقع، الرسايل، التذكيرات) شغالة بالكود من دلوقتي

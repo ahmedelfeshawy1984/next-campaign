@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { hasStoredSession, currentDeviceKind, clearSession } from '@/lib/family-love/session';
+import { hasStoredSession, currentDeviceKind, clearSession, getAccessToken } from '@/lib/family-love/session';
 import { familyLoveSupabase } from '@/lib/family-love/supabaseBrowser';
 import { qrCodeUrl } from '@/lib/family-love/qr';
 import { familyLoveEnv, familyLovePushIsConfigured } from '@/lib/family-love/env';
@@ -71,6 +71,47 @@ export default function FamilyLoveHomePage() {
     }
     Promise.all([loadChildren(), loadAd()]).finally(() => setReady(true));
   }, [router, loadChildren, loadAd]);
+
+  // شريط الباص حي فعليًا — أي تغيير في task_occurrences بتاع طفلنا (لحظة ما
+  // يضغط "خلصت المحطة دي") بيوصل هنا لحظيًا عن طريق Supabase Realtime، من
+  // غير أي تتبع GPS. لازم Realtime replication يتفعّل لجدول task_occurrences
+  // من Supabase dashboard (Database → Replication) — راجع
+  // docs/family-love-اللي-باقي.md.
+  useEffect(() => {
+    if (children.length === 0) return;
+    const sb = familyLoveSupabase();
+    let cancelled = false;
+    let channels: ReturnType<typeof sb.channel>[] = [];
+
+    (async () => {
+      // Realtime بيوثّق نفسه على الـ WebSocket مباشرة، مش عن طريق الـ fetch
+      // المخصص بتاعنا — لازم نديله توكن الجهاز يدويًا قبل الاشتراك عشان
+      // RLS يشتغل على البث زي ما بيشتغل على أي query عادي.
+      const token = await getAccessToken();
+      if (cancelled || !token) return;
+      sb.realtime.setAuth(token);
+
+      channels = children.map((child) =>
+        sb
+          .channel(`fl-occ-${child.id}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'task_occurrences', filter: `child_profile_id=eq.${child.id}` },
+            () => {
+              sb.rpc('fl_today_board', { p_child_profile_id: child.id }).then(({ data }) => {
+                setBoards((prev) => ({ ...prev, [child.id]: (data as BoardTask[]) ?? [] }));
+              });
+            }
+          )
+          .subscribe()
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      channels.forEach((channel) => sb.removeChannel(channel));
+    };
+  }, [children]);
 
   async function addChild(event: React.FormEvent) {
     event.preventDefault();
